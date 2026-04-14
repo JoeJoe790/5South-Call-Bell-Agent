@@ -3,30 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Adjustable Nurse Monitor</title>
+    <title>Nurse Monitor - Sound Fix</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; }
-        #video-container { position: relative; width: 100%; height: 55vh; background: #000; overflow: hidden; }
+        #video-container { position: relative; width: 100%; height: 50vh; background: #000; overflow: hidden; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* The Red Scan Box - Now Dynamic */
-        #scan-box { 
-            position: absolute; 
-            top: 50%; left: 50%; 
-            transform: translate(-50%, -50%);
-            border: 4px solid #ff3b30; 
-            border-radius: 8px; 
-            pointer-events: none; 
-            box-shadow: 0 0 20px rgba(255,59,48,0.5);
-        }
-
+        #scan-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px solid #ff3b30; border-radius: 8px; pointer-events: none; }
         .display-area { padding: 10px; text-align: center; height: 80px; background: #111; border-top: 1px solid #333; }
         #room-display { font-size: 1.8rem; font-weight: bold; color: #28cd41; margin: 0; }
         #timer-display { font-size: 0.9rem; color: #ffcc00; }
-
-        .controls { padding: 15px; background: #000; height: 35vh; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-        button { padding: 15px; background: #28cd41; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; }
+        .controls { padding: 15px; background: #000; height: 40vh; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        button { padding: 15px; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; }
+        #startBtn { background: #28cd41; }
+        #testBtn { background: #007aff; margin-top: 5px; }
         .setting { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: #aaa; }
         input[type=range], select { width: 55%; }
     </style>
@@ -36,42 +26,25 @@
         <video id="video" autoplay playsinline></video>
         <div id="scan-box"></div>
     </div>
-    
     <div class="display-area">
-        <p id="room-display">Adjust Box to Fit Numbers</p>
+        <p id="room-display">Tap Test Voice first</p>
         <p id="timer-display"></p>
     </div>
-
     <div class="controls">
         <button id="startBtn">1. START CAMERA</button>
+        <button id="testBtn">2. TEST VOICE (Unlocks Sound)</button>
         
-        <div class="setting">
-            <label>Box Width</label>
-            <input type="range" id="boxW" min="50" max="350" value="180">
-        </div>
-        <div class="setting">
-            <label>Box Height</label>
-            <input type="range" id="boxH" min="50" max="300" value="100">
-        </div>
-
-        <div class="setting">
-            <label>Voice</label>
-            <select id="voiceSelect"></select>
-        </div>
-        <div class="setting">
-            <label>Repeat (min)</label>
-            <input type="range" id="repSlider" min="1" max="10" step="1" value="2">
-            <span id="repLabel">2m</span>
-        </div>
-        <div class="setting">
-            <label>Volume</label>
-            <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
-        </div>
+        <div class="setting"><label>Box Width</label><input type="range" id="boxW" min="50" max="350" value="180"></div>
+        <div class="setting"><label>Box Height</label><input type="range" id="boxH" min="50" max="300" value="100"></div>
+        <div class="setting"><label>Voice</label><select id="voiceSelect"></select></div>
+        <div class="setting"><label>Repeat (min)</label><input type="range" id="repSlider" min="1" max="10" step="1" value="2"><span id="repLabel">2m</span></div>
+        <div class="setting"><label>Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
     </div>
 
     <script>
         const video = document.getElementById('video');
         const startBtn = document.getElementById('startBtn');
+        const testBtn = document.getElementById('testBtn');
         const scanBox = document.getElementById('scan-box');
         const boxW = document.getElementById('boxW');
         const boxH = document.getElementById('boxH');
@@ -79,18 +52,10 @@
         const timerDisplay = document.getElementById('timer-display');
         const repSlider = document.getElementById('repSlider');
         let synth = window.speechSynthesis;
-        
-        let activeRooms = []; 
-        let lastSet = ""; 
-        let secondsLeft = 0;
+        let activeRooms = []; let lastSet = ""; let secondsLeft = 0;
 
-        // Resize Logic
-        const updateBox = () => {
-            scanBox.style.width = boxW.value + 'px';
-            scanBox.style.height = boxH.value + 'px';
-        };
-        boxW.oninput = updateBox; boxH.oninput = updateBox;
-        updateBox();
+        const updateBox = () => { scanBox.style.width = boxW.value + 'px'; scanBox.style.height = boxH.value + 'px'; };
+        boxW.oninput = updateBox; boxH.oninput = updateBox; updateBox();
 
         function loadVoices() {
             document.getElementById('voiceSelect').innerHTML = synth.getVoices()
@@ -99,11 +64,20 @@
         synth.onvoiceschanged = loadVoices; loadVoices();
         repSlider.oninput = () => document.getElementById('repLabel').innerText = repSlider.value + 'm';
 
+        // THE KEY SOUND FIX:
+        // We must trigger a speak action on a button click to "unlock" audio on iPhone.
+        testBtn.onclick = () => {
+            const t = new SpeechSynthesisUtterance("Sound Unlocked");
+            t.voice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            t.volume = document.getElementById('vol').value;
+            synth.speak(t);
+            roomDisplay.innerText = "Sound should be working!";
+        };
+
         startBtn.onclick = async () => {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
             video.srcObject = stream;
             startBtn.style.display = "none";
-            synth.speak(new SpeechSynthesisUtterance("")); 
             startScanning();
             setInterval(tick, 1000);
         };
@@ -111,24 +85,14 @@
         async function startScanning() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
             setInterval(async () => {
-                // Only capture what's inside the red box
                 const scale = video.videoWidth / video.clientWidth;
-                const w = boxW.value * scale;
-                const h = boxH.value * scale;
-                const x = (video.videoWidth - w) / 2;
-                const y = (video.videoHeight - h) / 2;
-
+                const w = boxW.value * scale; const h = boxH.value * scale;
+                const x = (video.videoWidth - w) / 2; const y = (video.videoHeight - h) / 2;
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
-                
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                const found = (text.match(/\d{4}/g) || [])
-                    .map(n => n.substring(2))
-                    .filter((v, i, a) => a.indexOf(v) === i && parseInt(v) <= 60)
-                    .sort();
-
+                const found = (text.match(/\d{4}/g) || []).map(n => n.substring(2)).filter((v, i, a) => a.indexOf(v) === i && parseInt(v) <= 60).sort();
                 activeRooms = found;
                 if (activeRooms.length > 0) {
                     roomDisplay.innerText = "Rooms: " + activeRooms.join(", ");
@@ -158,10 +122,7 @@
         function tick() {
             if (activeRooms.length > 0) {
                 if (secondsLeft <= 0) { announce(); secondsLeft = repSlider.value * 60; }
-                else { 
-                    secondsLeft--;
-                    timerDisplay.innerText = `Repeat in ${Math.floor(secondsLeft/60)}m ${secondsLeft%60}s`;
-                }
+                else { secondsLeft--; timerDisplay.innerText = `Repeat in ${Math.floor(secondsLeft/60)}m ${secondsLeft%60}s`; }
             }
         }
     </script>
