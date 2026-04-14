@@ -3,53 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Nurse Smart Monitor</title>
+    <title>Adjustable Nurse Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; }
-        .header { padding: 10px; text-align: center; background: #1a1a1a; font-size: 0.9rem; border-bottom: 1px solid #333; }
-        #video-container { position: relative; width: 100%; height: 50vh; background: #000; }
+        #video-container { position: relative; width: 100%; height: 55vh; background: #000; overflow: hidden; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        .scan-box { position: absolute; top: 10%; left: 5%; width: 160px; height: 100px; border: 3px solid #ff3b30; border-radius: 8px; pointer-events: none; }
-        .display-area { padding: 10px; background: #000; text-align: center; border-bottom: 1px solid #333; height: 110px; }
-        #room-display { font-size: 2rem; font-weight: bold; color: #28cd41; margin: 5px 0; }
-        #timer-display { font-size: 1.1rem; color: #ffcc00; font-weight: 500; }
-        .controls { padding: 15px; background: #111; height: 35vh; display: flex; flex-direction: column; gap: 10px; }
-        button { padding: 18px; background: #28cd41; color: white; border: none; border-radius: 12px; font-size: 1.2rem; font-weight: bold; }
-        .setting { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: #aaa; }
-        input[type=range], select { width: 60%; }
+        
+        /* The Red Scan Box - Now Dynamic */
+        #scan-box { 
+            position: absolute; 
+            top: 50%; left: 50%; 
+            transform: translate(-50%, -50%);
+            border: 4px solid #ff3b30; 
+            border-radius: 8px; 
+            pointer-events: none; 
+            box-shadow: 0 0 20px rgba(255,59,48,0.5);
+        }
+
+        .display-area { padding: 10px; text-align: center; height: 80px; background: #111; border-top: 1px solid #333; }
+        #room-display { font-size: 1.8rem; font-weight: bold; color: #28cd41; margin: 0; }
+        #timer-display { font-size: 0.9rem; color: #ffcc00; }
+
+        .controls { padding: 15px; background: #000; height: 35vh; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        button { padding: 15px; background: #28cd41; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; }
+        .setting { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: #aaa; }
+        input[type=range], select { width: 55%; }
     </style>
 </head>
 <body>
-    <div class="header">NURSE STATION MONITOR</div>
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
-        <div class="scan-box"></div>
+        <div id="scan-box"></div>
     </div>
+    
     <div class="display-area">
-        <p id="room-display">Waiting...</p>
+        <p id="room-display">Adjust Box to Fit Numbers</p>
         <p id="timer-display"></p>
     </div>
+
     <div class="controls">
-        <button id="startBtn">START SYSTEM</button>
-        <div class="setting"><label>Voice</label><select id="voiceSelect"></select></div>
-        <div class="setting"><label>Vol</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
-        <div class="setting"><label>Repeat</label><input type="range" id="repSlider" min="1" max="10" step="1" value="3"><span id="repLabel">3m</span></div>
+        <button id="startBtn">1. START CAMERA</button>
+        
+        <div class="setting">
+            <label>Box Width</label>
+            <input type="range" id="boxW" min="50" max="350" value="180">
+        </div>
+        <div class="setting">
+            <label>Box Height</label>
+            <input type="range" id="boxH" min="50" max="300" value="100">
+        </div>
+
+        <div class="setting">
+            <label>Voice</label>
+            <select id="voiceSelect"></select>
+        </div>
+        <div class="setting">
+            <label>Repeat (min)</label>
+            <input type="range" id="repSlider" min="1" max="10" step="1" value="2">
+            <span id="repLabel">2m</span>
+        </div>
+        <div class="setting">
+            <label>Volume</label>
+            <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
+        </div>
     </div>
+
     <script>
         const video = document.getElementById('video');
         const startBtn = document.getElementById('startBtn');
-        const voiceSelect = document.getElementById('voiceSelect');
+        const scanBox = document.getElementById('scan-box');
+        const boxW = document.getElementById('boxW');
+        const boxH = document.getElementById('boxH');
         const roomDisplay = document.getElementById('room-display');
         const timerDisplay = document.getElementById('timer-display');
         const repSlider = document.getElementById('repSlider');
         let synth = window.speechSynthesis;
+        
         let activeRooms = []; 
-        let lastAnnouncedSet = ""; 
-        let secondsUntilRepeat = 0;
+        let lastSet = ""; 
+        let secondsLeft = 0;
+
+        // Resize Logic
+        const updateBox = () => {
+            scanBox.style.width = boxW.value + 'px';
+            scanBox.style.height = boxH.value + 'px';
+        };
+        boxW.oninput = updateBox; boxH.oninput = updateBox;
+        updateBox();
 
         function loadVoices() {
-            voiceSelect.innerHTML = synth.getVoices()
+            document.getElementById('voiceSelect').innerHTML = synth.getVoices()
                 .map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
         synth.onvoiceschanged = loadVoices; loadVoices();
@@ -59,66 +103,66 @@
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
             video.srcObject = stream;
             startBtn.style.display = "none";
-            synth.speak(new SpeechSynthesisUtterance("System Active"));
+            synth.speak(new SpeechSynthesisUtterance("")); 
             startScanning();
-            startCountdown();
+            setInterval(tick, 1000);
         };
 
         async function startScanning() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+            
             setInterval(async () => {
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0);
+                // Only capture what's inside the red box
+                const scale = video.videoWidth / video.clientWidth;
+                const w = boxW.value * scale;
+                const h = boxH.value * scale;
+                const x = (video.videoWidth - w) / 2;
+                const y = (video.videoHeight - h) / 2;
+
+                canvas.width = w; canvas.height = h;
+                ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
+                
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                const matches = text.match(/\d{4}/g) || [];
-                const found = matches
-                    .map(num => num.substring(2)) // "5102" becomes "02"
+                const found = (text.match(/\d{4}/g) || [])
+                    .map(n => n.substring(2))
                     .filter((v, i, a) => a.indexOf(v) === i && parseInt(v) <= 60)
                     .sort();
 
                 activeRooms = found;
                 if (activeRooms.length > 0) {
-                    roomDisplay.innerText = "Active: " + activeRooms.join(", ");
-                    const currentSet = activeRooms.join(",");
-                    if (currentSet !== lastAnnouncedSet) {
-                        announceRooms();
-                        secondsUntilRepeat = parseInt(repSlider.value) * 60;
-                        lastAnnouncedSet = currentSet;
+                    roomDisplay.innerText = "Rooms: " + activeRooms.join(", ");
+                    if (activeRooms.join(",") !== lastSet) {
+                        announce();
+                        secondsLeft = repSlider.value * 60;
+                        lastSet = activeRooms.join(",");
                     }
                 } else {
-                    roomDisplay.innerText = "No Calls";
+                    roomDisplay.innerText = "Scanning Area...";
                     timerDisplay.innerText = "";
-                    lastAnnouncedSet = "";
-                    secondsUntilRepeat = 0;
+                    lastSet = "";
                 }
-            }, 1000); // 1-second scan rate
+            }, 1200);
         }
 
-        function announceRooms() {
+        function announce() {
             if (activeRooms.length === 0) return;
             synth.cancel();
-            let speechText = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0, -1).join(", ") + " and " + activeRooms.slice(-1);
-            const utterance = new SpeechSynthesisUtterance(speechText);
-            const selectedVoice = synth.getVoices().find(v => v.name === voiceSelect.value);
-            if (selectedVoice) utterance.voice = selectedVoice;
-            utterance.volume = document.getElementById('vol').value;
-            synth.speak(utterance);
+            let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
+            const ut = new SpeechSynthesisUtterance(msg);
+            ut.voice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            ut.volume = document.getElementById('vol').value;
+            synth.speak(ut);
         }
 
-        function startCountdown() {
-            setInterval(() => {
-                if (activeRooms.length > 0 && secondsUntilRepeat > 0) {
-                    secondsUntilRepeat--;
-                    const mins = Math.floor(secondsUntilRepeat / 60);
-                    const secs = secondsUntilRepeat % 60;
-                    timerDisplay.innerText = `Repeat in ${mins}m ${secs}s`;
-                    if (secondsUntilRepeat === 0) {
-                        announceRooms();
-                        secondsUntilRepeat = parseInt(repSlider.value) * 60;
-                    }
+        function tick() {
+            if (activeRooms.length > 0) {
+                if (secondsLeft <= 0) { announce(); secondsLeft = repSlider.value * 60; }
+                else { 
+                    secondsLeft--;
+                    timerDisplay.innerText = `Repeat in ${Math.floor(secondsLeft/60)}m ${secondsLeft%60}s`;
                 }
-            }, 1000);
+            }
         }
     </script>
 </body>
