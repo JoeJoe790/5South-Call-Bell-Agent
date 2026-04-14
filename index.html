@@ -3,29 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Fixed Nurse Monitor</title>
+    <title>Nurse Monitor Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        :root { --accent: #28cd41; --danger: #ff3b30; --warning: #ffcc00; }
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Responsive Layout: Side-by-side in Landscape */
+        @media (orientation: landscape) {
+            body { flex-direction: row; }
+            #video-container { flex: 1.2; height: 100vh; }
+            #dashboard { flex: 1; height: 100vh; border-top: none !important; border-left: 2px solid #333; }
+        }
+
         #video-container { position: relative; flex: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        #scan-box { position: absolute; border: 4px solid #ff3b30; border-radius: 8px; pointer-events: none; box-shadow: 0 0 15px rgba(255,59,48,0.5); z-index: 5; }
+        #scan-box { position: absolute; border: 3px solid var(--danger); border-radius: 8px; pointer-events: none; box-shadow: 0 0 15px rgba(255,59,48,0.4); z-index: 5; box-sizing: border-box; }
 
-        #dashboard { height: 45vh; background: #000; border-top: 2px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; position: relative; }
-        #room-display { font-weight: 900; color: #28cd41; text-align: center; width: 100%; line-height: 1; }
-        #timer-display { font-size: 1.2rem; color: #ffcc00; margin-top: 10px; font-weight: bold; min-height: 1.5rem; }
-        #status-light { font-size: 0.7rem; color: #444; position: absolute; bottom: 5px; right: 10px; }
+        #dashboard { flex: 1; background: #000; border-top: 2px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        #room-display { font-weight: 900; color: var(--accent); text-align: center; width: 100%; line-height: 1.1; overflow-wrap: break-word; }
+        #timer-display { font-size: 1rem; color: var(--warning); margin-top: 15px; font-weight: bold; font-family: monospace; }
+        #status-light { font-size: 0.7rem; color: #666; position: absolute; bottom: 10px; right: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
-        #settings-menu { position: fixed; right: -320px; top: 0; width: 280px; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 100; transition: 0.3s; padding: 20px; border-left: 1px solid rgba(255,255,255,0.2); overflow-y: auto; }
+        #settings-menu { position: fixed; right: -320px; top: 0; width: 280px; height: 100%; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 100; transition: 0.3s; padding: 20px; border-left: 1px solid #444; overflow-y: auto; }
         #settings-menu.open { right: 0; }
-        .setting-row { margin-bottom: 15px; display: flex; flex-direction: column; }
-        .slider-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-        .label-text { font-size: 0.7rem; color: #00e5ff; font-weight: bold; text-transform: uppercase; width: 80px; }
-        input[type=range] { flex: 1; }
+        .setting-row { margin-bottom: 20px; display: flex; flex-direction: column; }
+        .slider-group { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+        .label-text { font-size: 0.7rem; color: #00e5ff; font-weight: bold; width: 80px; }
+        input[type=range] { flex: 1; height: 25px; }
 
-        #menu-toggle { position: absolute; top: 10px; right: 10px; background: rgba(51,51,51,0.6); color: #fff; border: 1px solid #777; padding: 10px 15px; border-radius: 8px; font-weight: bold; z-index: 101; }
-        #startBtn { background: #28cd41; color: white; border: none; padding: 20px 40px; border-radius: 12px; font-size: 1.5rem; font-weight: bold; z-index: 200; }
-        .close-btn { background: #007aff; width: 100%; padding: 12px; border: none; color: white; border-radius: 8px; margin-top: 10px; font-weight: bold; }
+        #menu-toggle { position: absolute; top: 15px; right: 15px; background: rgba(51,51,51,0.8); color: #fff; border: 1px solid #777; padding: 12px; border-radius: 50%; font-size: 1.2rem; z-index: 101; cursor: pointer; }
+        #startBtn { background: var(--accent); color: white; border: none; padding: 25px 50px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(40,205,65,0.3); }
+        .close-btn { background: #007aff; width: 100%; padding: 15px; border: none; color: white; border-radius: 10px; margin-top: 15px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -33,37 +42,37 @@
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div id="scan-box"></div>
-        <button id="menu-toggle">⚙️ ADJUST</button>
+        <div id="menu-toggle">⚙️</div>
     </div>
 
     <div id="dashboard">
         <button id="startBtn">START SYSTEM</button>
         <div id="room-display"></div>
         <div id="timer-display"></div>
-        <div id="status-light">Scanner Idle</div>
+        <div id="status-light">Scanner Ready</div>
     </div>
 
     <div id="settings-menu">
-        <h3 style="margin-top:0; color:#28cd41;">Calibration</h3>
+        <h3 style="margin-top:0; color:var(--accent);">Scanner Calibration</h3>
         <div class="setting-row">
-            <div class="slider-group"><span class="label-text">Width</span><input type="range" id="boxW" min="50" max="450" value="220"></div>
-            <div class="slider-group"><span class="label-text">Height</span><input type="range" id="boxH" min="30" max="350" value="100"></div>
+            <div class="slider-group"><span class="label-text">Width</span><input type="range" id="boxW" min="50" max="600" value="250"></div>
+            <div class="slider-group"><span class="label-text">Height</span><input type="range" id="boxH" min="30" max="400" value="120"></div>
         </div>
         <div class="setting-row">
-            <div class="slider-group"><span class="label-text">Horizontal</span><input type="range" id="boxX" min="-45" max="45" value="0"></div>
-            <div class="slider-group"><span class="label-text">Vertical</span><input type="range" id="boxY" min="-45" max="45" value="0"></div>
+            <div class="slider-group"><span class="label-text">X-Offset</span><input type="range" id="boxX" min="-50" max="50" value="0"></div>
+            <div class="slider-group"><span class="label-text">Y-Offset</span><input type="range" id="boxY" min="-50" max="50" value="0"></div>
         </div>
         <div class="setting-row">
-            <label style="font-size: 0.7rem; color: #ffcc00;">REPEAT EVERY: <span id="repLabel">2m</span></label>
+            <label style="font-size: 0.7rem; color: var(--warning);">REPEAT ANNOUNCEMENT: <span id="repLabel">2m</span></label>
             <input type="range" id="repSlider" min="1" max="15" value="2">
         </div>
         <div class="setting-row">
-            <label style="font-size: 0.7rem;">VOICE & VOLUME</label>
-            <select id="voiceSelect" style="background:rgba(0,0,0,0.5); color:white; border:1px solid #777; padding:5px; margin-bottom:10px;"></select>
-            <div class="slider-group"><span class="label-text">Vol</span><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
+            <label style="font-size: 0.7rem;">VOICE SELECTION</label>
+            <select id="voiceSelect" style="background:#222; color:white; border:1px solid #777; padding:8px; margin-top:5px; border-radius:5px;"></select>
+            <div class="slider-group"><span class="label-text">Volume</span><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
         </div>
-        <button id="testBtn" style="width:100%; background:rgba(255,255,255,0.1); color:white; padding:10px; border:1px solid #fff; border-radius:8px;">Test Sound</button>
-        <button class="close-btn" onclick="toggleMenu()">BACK TO SCREEN</button>
+        <button id="testBtn" style="width:100%; background:transparent; color:white; padding:10px; border:1px solid #555; border-radius:8px;">Test Audio</button>
+        <button class="close-btn" onclick="toggleMenu()">SAVE & CLOSE</button>
     </div>
 
     <script>
@@ -97,37 +106,58 @@
         };
 
         function loadVoices() {
-            document.getElementById('voiceSelect').innerHTML = synth.getVoices().map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            const voices = synth.getVoices();
+            if (voices.length > 0) {
+                document.getElementById('voiceSelect').innerHTML = voices
+                    .map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            }
         }
-        synth.onvoiceschanged = loadVoices; loadVoices();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        loadVoices();
 
         startBtn.onclick = async () => {
-            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-            video.srcObject = s;
-            startBtn.style.display = 'none';
-            statusLight.innerText = "Scanner Active";
-            startScanning();
-            setInterval(tick, 1000);
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }, 
+                    audio: false 
+                });
+                video.srcObject = s;
+                startBtn.style.display = 'none';
+                statusLight.innerText = "SCANNER ACTIVE";
+                startScanning();
+                setInterval(tick, 1000);
+            } catch (err) {
+                alert("Camera access denied. Please use HTTPS.");
+            }
         };
 
         async function startScanning() {
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { alpha: false });
             
             setInterval(async () => {
-                if (!video.videoWidth) return;
+                if (!video.videoWidth || video.readyState < 2) return;
                 
-                // FIXED MATH: Mapping Screen % to Camera Pixels
-                const scaleX = video.videoWidth / video.clientWidth;
-                const scaleY = video.videoHeight / video.clientHeight;
+                // CRITICAL: Re-calculate scaling every frame to support rotation
+                const vWidth = video.videoWidth;
+                const vHeight = video.videoHeight;
+                const dWidth = video.offsetWidth;
+                const dHeight = video.offsetHeight;
+
+                const scaleX = vWidth / dWidth;
+                const scaleY = vHeight / dHeight;
                 
                 const w = boxW.value * scaleX;
                 const h = boxH.value * scaleY;
                 
-                const x = (video.videoWidth / 2) + (boxX.value / 100 * video.videoWidth) - (w / 2);
-                const y = (video.videoHeight / 2) + (boxY.value / 100 * video.videoHeight) - (h / 2);
+                // Calculate position relative to video source
+                const x = (vWidth / 2) + ((boxX.value / 100) * vWidth) - (w / 2);
+                const y = (vHeight / 2) + ((boxY.value / 100) * vHeight) - (h / 2);
 
-                canvas.width = w; canvas.height = h;
+                canvas.width = w; 
+                canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
                 
                 statusLight.style.color = "#00e5ff";
@@ -151,17 +181,21 @@
                     roomDisplay.innerText = ""; 
                     timerDisplay.innerText = ""; 
                     lastSet = "";
-                    timeLeft = 0;
                     activeRooms = [];
                 }
-            }, 1000);
+            }, 1200); // 1.2s interval to save battery and CPU
         }
 
         function updateDisplay() {
             const count = activeRooms.length;
-            if (count === 1) roomDisplay.style.fontSize = "12rem";
-            else if (count === 2) roomDisplay.style.fontSize = "8rem";
-            else roomDisplay.style.fontSize = "5rem";
+            // Adjust font size based on orientation and count
+            let size = "10rem";
+            if (window.innerHeight < window.innerWidth) { // Landscape
+                size = count > 1 ? "6vw" : "12vw";
+            } else { // Portrait
+                size = count > 1 ? "6rem" : "10rem";
+            }
+            roomDisplay.style.fontSize = size;
             roomDisplay.innerText = activeRooms.join("  ");
         }
 
@@ -170,29 +204,32 @@
             synth.cancel();
             let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
             const ut = new SpeechSynthesisUtterance(msg);
-            const selectedVoice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            const voices = synth.getVoices();
+            const selectedVoice = voices.find(v => v.name === document.getElementById('voiceSelect').value);
             if(selectedVoice) ut.voice = selectedVoice;
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
         }
 
         function tick() {
-            if (activeRooms.length > 0) {
-                if (timeLeft <= 0) {
-                    announce();
-                    timeLeft = document.getElementById('repSlider').value * 60;
-                } else {
-                    timeLeft--;
-                    timerDisplay.innerText = `REPEATING IN: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
-                }
+            if (activeRooms.length > 0 && timeLeft > 0) {
+                timeLeft--;
+                timerDisplay.innerText = `NEXT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+                if (timeLeft <= 0) announce();
             }
         }
 
         document.getElementById('testBtn').onclick = () => {
-            const ut = new SpeechSynthesisUtterance("Audio Working");
+            const ut = new SpeechSynthesisUtterance("Audio System Check");
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
         };
+
+        // Update box on orientation change
+        window.addEventListener("resize", () => {
+            updateBox();
+            updateDisplay();
+        });
     </script>
 </body>
 </html>
