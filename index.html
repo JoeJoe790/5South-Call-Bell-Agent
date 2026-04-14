@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <title>Nurse Smart Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; }
+        .header { padding: 10px; text-align: center; background: #1a1a1a; font-size: 0.9rem; border-bottom: 1px solid #333; }
+        #video-container { position: relative; width: 100%; height: 50vh; background: #000; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        .scan-box { position: absolute; top: 10%; left: 5%; width: 160px; height: 100px; border: 3px solid #ff3b30; border-radius: 8px; pointer-events: none; }
+        .display-area { padding: 10px; background: #000; text-align: center; border-bottom: 1px solid #333; height: 110px; }
+        #room-display { font-size: 2rem; font-weight: bold; color: #28cd41; margin: 5px 0; }
+        #timer-display { font-size: 1.1rem; color: #ffcc00; font-weight: 500; }
+        .controls { padding: 15px; background: #111; height: 35vh; display: flex; flex-direction: column; gap: 10px; }
+        button { padding: 18px; background: #28cd41; color: white; border: none; border-radius: 12px; font-size: 1.2rem; font-weight: bold; }
+        .setting { display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; color: #aaa; }
+        input[type=range], select { width: 60%; }
+    </style>
+</head>
+<body>
+    <div class="header">NURSE STATION MONITOR</div>
+    <div id="video-container">
+        <video id="video" autoplay playsinline></video>
+        <div class="scan-box"></div>
+    </div>
+    <div class="display-area">
+        <p id="room-display">Waiting...</p>
+        <p id="timer-display"></p>
+    </div>
+    <div class="controls">
+        <button id="startBtn">START SYSTEM</button>
+        <div class="setting"><label>Voice</label><select id="voiceSelect"></select></div>
+        <div class="setting"><label>Vol</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
+        <div class="setting"><label>Repeat</label><input type="range" id="repSlider" min="1" max="10" step="1" value="3"><span id="repLabel">3m</span></div>
+    </div>
+    <script>
+        const video = document.getElementById('video');
+        const startBtn = document.getElementById('startBtn');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const roomDisplay = document.getElementById('room-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const repSlider = document.getElementById('repSlider');
+        let synth = window.speechSynthesis;
+        let activeRooms = []; 
+        let lastAnnouncedSet = ""; 
+        let secondsUntilRepeat = 0;
+
+        function loadVoices() {
+            voiceSelect.innerHTML = synth.getVoices()
+                .map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        }
+        synth.onvoiceschanged = loadVoices; loadVoices();
+        repSlider.oninput = () => document.getElementById('repLabel').innerText = repSlider.value + 'm';
+
+        startBtn.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+            video.srcObject = stream;
+            startBtn.style.display = "none";
+            synth.speak(new SpeechSynthesisUtterance("System Active"));
+            startScanning();
+            startCountdown();
+        };
+
+        async function startScanning() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            setInterval(async () => {
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0);
+                const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+                const matches = text.match(/\d{4}/g) || [];
+                const found = matches
+                    .map(num => num.substring(2)) // "5102" becomes "02"
+                    .filter((v, i, a) => a.indexOf(v) === i && parseInt(v) <= 60)
+                    .sort();
+
+                activeRooms = found;
+                if (activeRooms.length > 0) {
+                    roomDisplay.innerText = "Active: " + activeRooms.join(", ");
+                    const currentSet = activeRooms.join(",");
+                    if (currentSet !== lastAnnouncedSet) {
+                        announceRooms();
+                        secondsUntilRepeat = parseInt(repSlider.value) * 60;
+                        lastAnnouncedSet = currentSet;
+                    }
+                } else {
+                    roomDisplay.innerText = "No Calls";
+                    timerDisplay.innerText = "";
+                    lastAnnouncedSet = "";
+                    secondsUntilRepeat = 0;
+                }
+            }, 1000); // 1-second scan rate
+        }
+
+        function announceRooms() {
+            if (activeRooms.length === 0) return;
+            synth.cancel();
+            let speechText = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0, -1).join(", ") + " and " + activeRooms.slice(-1);
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            const selectedVoice = synth.getVoices().find(v => v.name === voiceSelect.value);
+            if (selectedVoice) utterance.voice = selectedVoice;
+            utterance.volume = document.getElementById('vol').value;
+            synth.speak(utterance);
+        }
+
+        function startCountdown() {
+            setInterval(() => {
+                if (activeRooms.length > 0 && secondsUntilRepeat > 0) {
+                    secondsUntilRepeat--;
+                    const mins = Math.floor(secondsUntilRepeat / 60);
+                    const secs = secondsUntilRepeat % 60;
+                    timerDisplay.innerText = `Repeat in ${mins}m ${secs}s`;
+                    if (secondsUntilRepeat === 0) {
+                        announceRooms();
+                        secondsUntilRepeat = parseInt(repSlider.value) * 60;
+                    }
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
