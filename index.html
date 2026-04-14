@@ -3,81 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Nurse Monitor - Sound Fix</title>
+    <title>High-Vis Nurse Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; }
-        #video-container { position: relative; width: 100%; height: 50vh; background: #000; overflow: hidden; }
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
+        
+        /* Camera Section */
+        #video-container { position: relative; flex: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        #scan-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 4px solid #ff3b30; border-radius: 8px; pointer-events: none; }
-        .display-area { padding: 10px; text-align: center; height: 80px; background: #111; border-top: 1px solid #333; }
-        #room-display { font-size: 1.8rem; font-weight: bold; color: #28cd41; margin: 0; }
-        #timer-display { font-size: 0.9rem; color: #ffcc00; }
-        .controls { padding: 15px; background: #000; height: 40vh; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
-        button { padding: 15px; color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: bold; }
-        #startBtn { background: #28cd41; }
-        #testBtn { background: #007aff; margin-top: 5px; }
-        .setting { display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; color: #aaa; }
-        input[type=range], select { width: 55%; }
+        #scan-box { position: absolute; border: 4px solid #ff3b30; border-radius: 8px; pointer-events: none; box-shadow: 0 0 15px rgba(255,59,48,0.5); }
+
+        /* GIANT DISPLAY AREA */
+        #dashboard { height: 40vh; background: #000; border-top: 2px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; position: relative; }
+        #room-display { font-weight: 900; color: #28cd41; text-align: center; width: 100%; line-height: 1; transition: all 0.2s; }
+        #timer-display { font-size: 1.2rem; color: #ffcc00; margin-top: 10px; font-weight: bold; }
+
+        /* SETTINGS DRAWER */
+        #settings-menu { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: rgba(20,20,20,0.95); z-index: 100; transition: 0.3s; padding: 20px; box-shadow: -5px 0 15px rgba(0,0,0,0.5); overflow-y: auto; }
+        #settings-menu.open { right: 0; }
+        .setting-row { margin-bottom: 20px; }
+        label { display: block; color: #aaa; font-size: 0.8rem; margin-bottom: 5px; }
+        input, select { width: 100%; }
+
+        /* BUTTONS */
+        #menu-toggle { position: absolute; top: 10px; right: 10px; background: #333; color: #fff; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; z-index: 101; }
+        #startBtn { background: #28cd41; color: white; border: none; padding: 20px; border-radius: 12px; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        .close-btn { background: #ff3b30; width: 100%; padding: 10px; border: none; color: white; border-radius: 8px; margin-top: 20px; }
     </style>
 </head>
 <body>
+
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div id="scan-box"></div>
+        <button id="menu-toggle">⚙️ Settings</button>
     </div>
-    <div class="display-area">
-        <p id="room-display">Tap Test Voice first</p>
-        <p id="timer-display"></p>
+
+    <div id="dashboard">
+        <button id="startBtn">1. START SYSTEM</button>
+        <div id="room-display"></div>
+        <div id="timer-display"></div>
     </div>
-    <div class="controls">
-        <button id="startBtn">1. START CAMERA</button>
-        <button id="testBtn">2. TEST VOICE (Unlocks Sound)</button>
-        
-        <div class="setting"><label>Box Width</label><input type="range" id="boxW" min="50" max="350" value="180"></div>
-        <div class="setting"><label>Box Height</label><input type="range" id="boxH" min="50" max="300" value="100"></div>
-        <div class="setting"><label>Voice</label><select id="voiceSelect"></select></div>
-        <div class="setting"><label>Repeat (min)</label><input type="range" id="repSlider" min="1" max="10" step="1" value="2"><span id="repLabel">2m</span></div>
-        <div class="setting"><label>Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
+
+    <div id="settings-menu">
+        <h3>Adjustments</h3>
+        <div class="setting-row"><button id="testBtn" style="width:100%; background:#007aff; color:white; padding:10px; border:none; border-radius:8px;">2. Test Voice</button></div>
+        <div class="setting-row"><label>Box Width</label><input type="range" id="boxW" min="50" max="400" value="200"></div>
+        <div class="setting-row"><label>Box Height</label><input type="range" id="boxH" min="30" max="300" value="80"></div>
+        <div class="setting-row"><label>Repeat (min)</label><input type="range" id="repSlider" min="1" max="10" value="2"><span id="repLabel">2m</span></div>
+        <div class="setting-row"><label>Voice Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
+        <div class="setting-row"><label>Voice Style</label><select id="voiceSelect"></select></div>
+        <button class="close-btn" onclick="toggleMenu()">Back to Screen</button>
     </div>
 
     <script>
         const video = document.getElementById('video');
         const startBtn = document.getElementById('startBtn');
-        const testBtn = document.getElementById('testBtn');
-        const scanBox = document.getElementById('scan-box');
-        const boxW = document.getElementById('boxW');
-        const boxH = document.getElementById('boxH');
         const roomDisplay = document.getElementById('room-display');
         const timerDisplay = document.getElementById('timer-display');
-        const repSlider = document.getElementById('repSlider');
+        const menu = document.getElementById('settings-menu');
+        const boxW = document.getElementById('boxW');
+        const boxH = document.getElementById('boxH');
+        const scanBox = document.getElementById('scan-box');
+        
         let synth = window.speechSynthesis;
-        let activeRooms = []; let lastSet = ""; let secondsLeft = 0;
+        let activeRooms = []; let lastSet = ""; let timeLeft = 0;
 
-        const updateBox = () => { scanBox.style.width = boxW.value + 'px'; scanBox.style.height = boxH.value + 'px'; };
+        // Drawer Toggle
+        function toggleMenu() { menu.classList.toggle('open'); }
+        document.getElementById('menu-toggle').onclick = toggleMenu;
+
+        // Calibration
+        const updateBox = () => {
+            scanBox.style.width = boxW.value + 'px';
+            scanBox.style.height = boxH.value + 'px';
+        };
         boxW.oninput = updateBox; boxH.oninput = updateBox; updateBox();
 
+        // Voice Setup
         function loadVoices() {
-            document.getElementById('voiceSelect').innerHTML = synth.getVoices()
-                .map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            document.getElementById('voiceSelect').innerHTML = synth.getVoices().map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
         synth.onvoiceschanged = loadVoices; loadVoices();
-        repSlider.oninput = () => document.getElementById('repLabel').innerText = repSlider.value + 'm';
-
-        // THE KEY SOUND FIX:
-        // We must trigger a speak action on a button click to "unlock" audio on iPhone.
-        testBtn.onclick = () => {
-            const t = new SpeechSynthesisUtterance("Sound Unlocked");
-            t.voice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
-            t.volume = document.getElementById('vol').value;
-            synth.speak(t);
-            roomDisplay.innerText = "Sound should be working!";
-        };
 
         startBtn.onclick = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-            video.srcObject = stream;
-            startBtn.style.display = "none";
+            const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+            video.srcObject = s;
+            startBtn.style.display = 'none';
             startScanning();
             setInterval(tick, 1000);
         };
@@ -87,26 +99,32 @@
             const ctx = canvas.getContext('2d');
             setInterval(async () => {
                 const scale = video.videoWidth / video.clientWidth;
-                const w = boxW.value * scale; const h = boxH.value * scale;
-                const x = (video.videoWidth - w) / 2; const y = (video.videoHeight - h) / 2;
+                const w = boxW.value * scale, h = boxH.value * scale;
+                const x = (video.videoWidth - w)/2, y = (video.videoHeight - h)/2;
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
                 const found = (text.match(/\d{4}/g) || []).map(n => n.substring(2)).filter((v, i, a) => a.indexOf(v) === i && parseInt(v) <= 60).sort();
+                
                 activeRooms = found;
                 if (activeRooms.length > 0) {
-                    roomDisplay.innerText = "Rooms: " + activeRooms.join(", ");
-                    if (activeRooms.join(",") !== lastSet) {
-                        announce();
-                        secondsLeft = repSlider.value * 60;
-                        lastSet = activeRooms.join(",");
-                    }
+                    updateDisplay();
+                    if (activeRooms.join(",") !== lastSet) { announce(); timeLeft = document.getElementById('repSlider').value * 60; lastSet = activeRooms.join(","); }
                 } else {
-                    roomDisplay.innerText = "Scanning Area...";
-                    timerDisplay.innerText = "";
-                    lastSet = "";
+                    roomDisplay.innerText = "READY"; roomDisplay.style.fontSize = "4rem";
+                    timerDisplay.innerText = ""; lastSet = "";
                 }
             }, 1200);
+        }
+
+        function updateDisplay() {
+            const count = activeRooms.length;
+            // Dynamic Font Sizing
+            if (count === 1) roomDisplay.style.fontSize = "12rem";
+            else if (count === 2) roomDisplay.style.fontSize = "8rem";
+            else roomDisplay.style.fontSize = "5rem";
+            
+            roomDisplay.innerText = activeRooms.join("  ");
         }
 
         function announce() {
@@ -121,10 +139,16 @@
 
         function tick() {
             if (activeRooms.length > 0) {
-                if (secondsLeft <= 0) { announce(); secondsLeft = repSlider.value * 60; }
-                else { secondsLeft--; timerDisplay.innerText = `Repeat in ${Math.floor(secondsLeft/60)}m ${secondsLeft%60}s`; }
+                if (timeLeft <= 0) { announce(); timeLeft = document.getElementById('repSlider').value * 60; }
+                else { timeLeft--; timerDisplay.innerText = `NEXT ALERT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`; }
             }
         }
+
+        document.getElementById('testBtn').onclick = () => {
+            const ut = new SpeechSynthesisUtterance("System Online");
+            ut.volume = document.getElementById('vol').value;
+            synth.speak(ut);
+        };
     </script>
 </body>
 </html>
