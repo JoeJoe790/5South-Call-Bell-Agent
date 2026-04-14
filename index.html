@@ -1,191 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room Monitor</title>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    background: #111;
+    color: #e5e5e5;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* VIDEO */
+#video-container {
+    flex: 1;
+    position: relative;
+    background: black;
+}
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* 🔴 SCAN BOX (FIXED) */
+#scan-box {
+    position: absolute;
+    border: 3px solid #ff3b30;
+    border-radius: 6px;
+    box-shadow: 0 0 12px rgba(255, 59, 48, 0.7);
+}
+
+/* HEADER */
+#header {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #bbb;
+}
+
+/* BUTTON */
+button {
+    background: #1e1e1e;
+    border: 1px solid #444;
+    color: #ddd;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* DASHBOARD */
+#dashboard {
+    height: 38vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 🟢 ROOM DISPLAY (FIXED) */
+#room-display {
+    font-size: 7rem;
+    font-weight: 800;
+    letter-spacing: 5px;
+    color: #28cd41;
+}
+
+/* TIMER */
+#timer-display {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+/* SETTINGS PANEL */
+#settings {
+    position: fixed;
+    right: -300px;
+    top: 0;
+    width: 260px;
+    height: 100%;
+    background: #181818;
+    padding: 20px;
+    border-left: 1px solid #333;
+    transition: 0.25s;
+}
+#settings.open { right: 0; }
+
+label {
+    font-size: 0.75rem;
+    color: #888;
+}
+
+input, select {
+    width: 100%;
+    margin: 5px 0 12px;
+}
+
+/* START BUTTON */
+#startBtn {
+    padding: 16px 28px;
+    font-size: 1.1rem;
+}
+</style>
+</head>
+
+<body>
+
+<div id="video-container">
+    <video id="video" autoplay playsinline></video>
+    <div id="scan-box"></div>
+
+    <div id="header">
+        <div id="status">Idle</div>
+        <button onclick="toggleSettings()">Settings</button>
+    </div>
+</div>
+
+<div id="dashboard">
+    <button id="startBtn">Start</button>
+    <div id="room-display"></div>
+    <div id="timer-display"></div>
+</div>
+
+<div id="settings">
+    <h3 style="margin-top:0;">Settings</h3>
+
+    <label>Width</label>
+    <input type="range" id="boxW" min="50" max="450" value="220">
+
+    <label>Height</label>
+    <input type="range" id="boxH" min="30" max="350" value="100">
+
+    <label>Horizontal</label>
+    <input type="range" id="boxX" min="-45" max="45" value="0">
+
+    <label>Vertical</label>
+    <input type="range" id="boxY" min="-45" max="45" value="0">
+
+    <label>Repeat (minutes)</label>
+    <input type="range" id="repSlider" min="1" max="15" value="2">
+
+    <label>Voice</label>
+    <select id="voiceSelect"></select>
+
+    <label>Volume</label>
+    <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
+
+    <button onclick="toggleSettings()">Close</button>
+</div>
+
 <script>
 const video = document.getElementById('video');
 const startBtn = document.getElementById('startBtn');
 const roomDisplay = document.getElementById('room-display');
 const timerDisplay = document.getElementById('timer-display');
-const statusLight = document.getElementById('status-light');
-const menu = document.getElementById('settings-menu');
-const boxW = document.getElementById('boxW'), boxH = document.getElementById('boxH');
-const boxX = document.getElementById('boxX'), boxY = document.getElementById('boxY');
+const status = document.getElementById('status');
+
+const boxW = document.getElementById('boxW');
+const boxH = document.getElementById('boxH');
+const boxX = document.getElementById('boxX');
+const boxY = document.getElementById('boxY');
 const scanBox = document.getElementById('scan-box');
 
-let synth = window.speechSynthesis;
+let synth = speechSynthesis;
 let activeRooms = [];
-let lastSet = "";
-let timeLeft = 0;
-
-// NEW: stability + cooldown
 let lastDetectedTime = 0;
 let lastSpoken = 0;
+let timeLeft = 0;
 
-function toggleMenu() { menu.classList.toggle('open'); }
-document.getElementById('menu-toggle').onclick = toggleMenu;
+function toggleSettings() {
+    document.getElementById('settings').classList.toggle('open');
+}
 
-// Scan box UI
-const updateBox = () => {
+/* scan box */
+function updateBox() {
     scanBox.style.width = boxW.value + 'px';
     scanBox.style.height = boxH.value + 'px';
     scanBox.style.left = `calc(50% + ${boxX.value}% - ${boxW.value/2}px)`;
     scanBox.style.top = `calc(50% + ${boxY.value}% - ${boxH.value/2}px)`;
-};
+}
 [boxW, boxH, boxX, boxY].forEach(el => el.oninput = updateBox);
 updateBox();
 
-// Repeat slider
-document.getElementById('repSlider').oninput = (e) => {
-    document.getElementById('repLabel').innerText = e.target.value + 'm';
-};
-
-// Voice
+/* voices */
 function loadVoices() {
-    document.getElementById('voiceSelect').innerHTML =
-        synth.getVoices().map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+    voiceSelect.innerHTML = synth.getVoices().map(v => `<option>${v.name}</option>`).join('');
 }
 synth.onvoiceschanged = loadVoices;
 loadVoices();
 
-// Start system
+/* start */
 startBtn.onclick = async () => {
-    const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-        audio: false
-    });
-
-    video.srcObject = s;
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
     startBtn.style.display = 'none';
-    statusLight.innerText = "Scanner Active";
+    status.innerText = "Active";
 
-    startScanning();
-    setInterval(tick, 1000);
+    scanLoop();
+    setInterval(timerTick, 1000);
 };
 
-// 🔥 FIXED SCANNING ENGINE
-async function startScanning() {
+async function scanLoop() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // ⛔ Slower interval (FIX #1)
     setInterval(async () => {
         if (!video.videoWidth) return;
 
-        const scaleX = video.videoWidth / video.clientWidth;
-        const scaleY = video.videoHeight / video.clientHeight;
-
-        const w = boxW.value * scaleX;
-        const h = boxH.value * scaleY;
-
-        const x = (video.videoWidth / 2) + (boxX.value / 100 * video.videoWidth) - (w / 2);
-        const y = (video.videoHeight / 2) + (boxY.value / 100 * video.videoHeight) - (h / 2);
+        const w = boxW.value;
+        const h = boxH.value;
 
         canvas.width = w;
         canvas.height = h;
 
-        // 🎯 Image preprocessing (SMART FIX #2)
         ctx.filter = "grayscale(1) contrast(2)";
-        ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
-
-        // 🎯 Visual highlight (SMART FIX #1)
-        ctx.strokeStyle = "lime";
-        ctx.lineWidth = 3;
-        ctx.strokeRect(0, 0, w, h);
-
-        statusLight.style.color = "#00e5ff";
+        ctx.drawImage(video, 0, 0, w, h);
 
         const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
 
-        statusLight.style.color = "#444";
-
-        // 🔍 Improved filtering (FIX #2)
         const found = (text.match(/\d{4}/g) || [])
-            .map(n => n.substring(2))
-            .map(n => parseInt(n))
+            .map(n => parseInt(n.substring(2)))
             .filter(n => n >= 1 && n <= 60)
-            .map(n => n.toString().padStart(2, '0'))
-            .filter((v, i, a) => a.indexOf(v) === i)
-            .sort();
+            .map(n => n.toString().padStart(2,'0'));
 
-        // 🧠 Stability logic (FIX #3)
-        if (found.length > 0) {
+        if (found.length) {
+            activeRooms = [...new Set(found)];
             lastDetectedTime = Date.now();
-            activeRooms = found;
-            updateDisplay();
+            roomDisplay.innerText = activeRooms.join(" ");
 
-            if (activeRooms.join(",") !== lastSet) {
-                lastSet = activeRooms.join(",");
-                announce();
-                timeLeft = document.getElementById('repSlider').value * 60;
+            if (Date.now() - lastSpoken > 5000) {
+                speak();
+                timeLeft = repSlider.value * 60;
             }
-
         } else {
-            // wait 3 seconds before clearing
             if (Date.now() - lastDetectedTime > 3000) {
                 activeRooms = [];
                 roomDisplay.innerText = "";
-                timerDisplay.innerText = "";
-                lastSet = "";
-                timeLeft = 0;
             }
         }
 
-    }, 2500); // ⛔ slower scan = stable + faster overall
+    }, 2500);
 }
 
-// Display logic
-function updateDisplay() {
-    const count = activeRooms.length;
-
-    if (count === 1) roomDisplay.style.fontSize = "12rem";
-    else if (count === 2) roomDisplay.style.fontSize = "8rem";
-    else roomDisplay.style.fontSize = "5rem";
-
-    roomDisplay.innerText = activeRooms.join("  ");
-}
-
-// 🔊 Audio with cooldown (FIX #4)
-function announce() {
-    if (activeRooms.length === 0) return;
-
-    if (Date.now() - lastSpoken < 5000) return;
-
+function speak() {
     lastSpoken = Date.now();
-
-    synth.cancel();
 
     let msg = activeRooms.length === 1
         ? "Room " + activeRooms[0]
-        : "Rooms " + activeRooms.slice(0, -1).join(", ") + " and " + activeRooms.slice(-1);
+        : "Rooms " + activeRooms.join(", ");
 
-    const ut = new SpeechSynthesisUtterance(msg);
-
-    const selectedVoice = synth.getVoices().find(v =>
-        v.name === document.getElementById('voiceSelect').value
-    );
-
-    if (selectedVoice) ut.voice = selectedVoice;
-
-    ut.volume = document.getElementById('vol').value;
-
+    let ut = new SpeechSynthesisUtterance(msg);
+    ut.volume = vol.value;
+    ut.voice = synth.getVoices().find(v => v.name === voiceSelect.value);
     synth.speak(ut);
 }
 
-// Timer loop
-function tick() {
-    if (activeRooms.length > 0) {
+function timerTick() {
+    if (activeRooms.length) {
         if (timeLeft <= 0) {
-            announce();
-            timeLeft = document.getElementById('repSlider').value * 60;
+            speak();
+            timeLeft = repSlider.value * 60;
         } else {
             timeLeft--;
-            timerDisplay.innerText =
-                `REPEATING IN: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+            timerDisplay.innerText = `${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
         }
     }
 }
-
-// Test audio
-document.getElementById('testBtn').onclick = () => {
-    const ut = new SpeechSynthesisUtterance("Audio Working");
-    ut.volume = document.getElementById('vol').value;
-    synth.speak(ut);
-};
 </script>
+
+</body>
+</html>
