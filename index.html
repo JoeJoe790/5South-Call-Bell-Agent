@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Ascom Monitor Pro</title>
+    <title>Nurse Monitor Pro - Ascom Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { --accent: #28cd41; --danger: #ff3b30; --warning: #ffcc00; }
         body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
+        /* LANDSCAPE: Split View (Camera Left, Numbers Right) */
         @media (orientation: landscape) {
             body { flex-direction: row; }
             #video-container { flex: 1.2; height: 100vh; border-right: 2px solid #333; }
             #dashboard { flex: 0.8; height: 100vh; padding: 10px; justify-content: flex-start; }
-            #room-display { display: flex; flex-direction: column; gap: 5px; font-size: 10vw !important; padding-top: 10px; }
+            #room-display { display: flex; flex-direction: column; gap: 5px; font-size: 10vw !important; padding-top: 20px; }
         }
 
+        /* PORTRAIT: Stacked View */
         @media (orientation: portrait) {
             #video-container { flex: 1; width: 100vw; }
             #dashboard { flex: 1; border-top: 2px solid #333; padding: 20px; }
@@ -28,18 +30,18 @@
 
         #dashboard { background: #000; display: flex; flex-direction: column; align-items: center; position: relative; }
         #room-display { font-weight: 900; color: var(--accent); text-align: center; width: 100%; line-height: 0.9; }
-        #timer-display { font-size: 0.9rem; color: var(--warning); margin-top: auto; padding-bottom: 25px; font-weight: bold; font-family: monospace; }
-        #status-light { font-size: 0.6rem; color: #555; position: absolute; bottom: 5px; right: 10px; }
+        #timer-display { font-size: 0.9rem; color: var(--warning); margin-top: auto; padding-bottom: 30px; font-weight: bold; font-family: monospace; }
+        #status-light { font-size: 0.6rem; color: #444; position: absolute; bottom: 5px; right: 10px; text-transform: uppercase; }
 
         #settings-menu { position: fixed; right: -320px; top: 0; width: 280px; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; transition: 0.3s; padding: 20px; border-left: 1px solid #444; overflow-y: auto; }
         #settings-menu.open { right: 0; }
         .setting-row { margin-bottom: 15px; display: flex; flex-direction: column; }
         .slider-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-        .label-text { font-size: 0.65rem; color: #00e5ff; font-weight: bold; width: 70px; text-transform: uppercase; }
+        .label-text { font-size: 0.65rem; color: #00e5ff; font-weight: bold; width: 70px; }
         input[type=range] { flex: 1; accent-color: var(--accent); }
 
         #menu-toggle { position: absolute; top: 10px; right: 10px; background: rgba(51,51,51,0.8); color: #fff; border: 1px solid #777; padding: 12px; border-radius: 10px; z-index: 101; cursor: pointer; }
-        #startBtn { background: var(--accent); color: white; border: none; padding: 25px 50px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        #startBtn { background: var(--accent); color: white; border: none; padding: 25px 50px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .close-btn { background: #007aff; width: 100%; padding: 12px; border: none; color: white; border-radius: 8px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
@@ -55,34 +57,34 @@
         <button id="startBtn">START SYSTEM</button>
         <div id="room-display"></div>
         <div id="timer-display"></div>
-        <div id="status-light">Ready</div>
+        <div id="status-light">Idle</div>
     </div>
 
     <div id="settings-menu">
-        <h3 style="margin-top:0; color:var(--accent);">Scanner Setup</h3>
+        <h3 style="margin-top:0; color:var(--accent);">Calibration</h3>
         <div class="setting-row">
             <div class="slider-group"><span class="label-text">Box Width</span><input type="range" id="boxW" min="50" max="800" value="300"></div>
             <div class="slider-group"><span class="label-text">Box Height</span><input type="range" id="boxH" min="20" max="400" value="60"></div>
         </div>
         <div class="setting-row">
-            <div class="slider-group"><span class="label-text">Horiz. Pos</span><input type="range" id="boxX" min="-50" max="50" value="0"></div>
-            <div class="slider-group"><span class="label-text">Vert. Pos</span><input type="range" id="boxY" min="-50" max="50" value="0"></div>
+            <div class="slider-group"><span class="label-text">X-Pos</span><input type="range" id="boxX" min="-50" max="50" value="0"></div>
+            <div class="slider-group"><span class="label-text">Y-Pos</span><input type="range" id="boxY" min="-50" max="50" value="0"></div>
         </div>
         <div class="setting-row">
             <label style="font-size: 0.7rem; color: var(--warning);">REPEAT ALERT: <span id="repLabel">2m</span></label>
             <input type="range" id="repSlider" min="1" max="15" value="2">
         </div>
         <div class="setting-row">
-            <label style="font-size: 0.7rem;">OCR CONTRAST</label>
+            <label style="font-size: 0.7rem;">OCR CONTRAST (Threshold)</label>
             <input type="range" id="threshold" min="50" max="220" value="135">
         </div>
         <div class="setting-row">
-            <label style="font-size: 0.7rem;">VOICE</label>
-            <select id="voiceSelect" style="background:#222; color:white; border:1px solid #777; padding:8px; border-radius:5px;"></select>
+            <label style="font-size: 0.7rem;">VOICE & VOLUME</label>
+            <select id="voiceSelect" style="background:#222; color:white; border:1px solid #777; padding:8px; border-radius:5px; margin-bottom:10px;"></select>
             <div class="slider-group"><span class="label-text">Volume</span><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
         </div>
         <button id="testBtn" style="width:100%; background:transparent; color:white; padding:10px; border:1px solid #555; border-radius:8px;">Test Audio</button>
-        <button class="close-btn" onclick="toggleMenu()">SAVE & EXIT</button>
+        <button class="close-btn" onclick="toggleMenu()">SAVE & CLOSE</button>
     </div>
 
     <script>
@@ -117,7 +119,8 @@
         };
 
         function loadVoices() {
-            document.getElementById('voiceSelect').innerHTML = synth.getVoices()
+            const voices = synth.getVoices();
+            document.getElementById('voiceSelect').innerHTML = voices
                 .map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
         if (speechSynthesis.onvoiceschanged !== undefined) {
@@ -126,15 +129,23 @@
         loadVoices();
 
         startBtn.onclick = async () => {
-            const s = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
-                audio: false 
-            });
-            video.srcObject = s;
-            startBtn.style.display = 'none';
-            statusLight.innerText = "Scanning Active";
-            startScanning();
-            setInterval(tick, 1000);
+            // Unlocking Audio for Mobile
+            const v = new SpeechSynthesisUtterance("");
+            synth.speak(v);
+
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
+                    audio: false 
+                });
+                video.srcObject = s;
+                startBtn.style.display = 'none';
+                statusLight.innerText = "System Active";
+                startScanning();
+                setInterval(tick, 1000);
+            } catch (err) {
+                alert("Camera access denied. Ensure you are on HTTPS.");
+            }
         };
 
         async function startScanning() {
@@ -144,21 +155,17 @@
             setInterval(async () => {
                 if (!video.videoWidth || video.readyState < 2) return;
                 
-                const vWidth = video.videoWidth;
-                const vHeight = video.videoHeight;
-                const dWidth = video.offsetWidth;
-                const dHeight = video.offsetHeight;
-
-                const scaleX = vWidth / dWidth;
-                const scaleY = vHeight / dHeight;
+                const scaleX = video.videoWidth / video.offsetWidth;
+                const scaleY = video.videoHeight / video.offsetHeight;
                 const w = boxW.value * scaleX;
                 const h = boxH.value * scaleY;
-                const x = (vWidth / 2) + ((boxX.value / 100) * vWidth) - (w / 2);
-                const y = (vHeight / 2) + ((boxY.value / 100) * vHeight) - (h / 2);
+                const x = (video.videoWidth / 2) + ((boxX.value / 100) * video.videoWidth) - (w / 2);
+                const y = (video.videoHeight / 2) + ((boxY.value / 100) * video.videoHeight) - (h / 2);
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
                 
+                // OCR Pre-Processing
                 let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 let data = imageData.data;
                 let thresh = thresholdInput.value;
@@ -173,14 +180,10 @@
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
                 statusLight.style.color = "#444";
 
-                // --- NEW LOGIC: GRAB LAST 2 DIGITS OF THE FIRST 4 ---
-                // Matches any block of digits that is 4 or 5 characters long
+                // Logic: Grab digits 3 and 4 of any 4 or 5 digit number
                 const matches = text.match(/\d{4,5}/g) || [];
                 const filtered = matches
-                    .map(num => {
-                        // Takes the 4-character chunk and grabs the last two (index 2 and 3)
-                        return num.substring(2, 4);
-                    }) 
+                    .map(num => num.substring(2, 4)) 
                     .filter((v, i, a) => a.indexOf(v) === i && parseInt(v) > 0)
                     .sort();
                 
@@ -198,7 +201,7 @@
                     lastSet = "";
                     activeRooms = [];
                 }
-            }, 1500);
+            }, 1800);
         }
 
         function updateDisplay() {
@@ -212,12 +215,16 @@
         function announce() {
             if (activeRooms.length === 0) return;
             synth.cancel();
-            let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
-            const ut = new SpeechSynthesisUtterance(msg);
-            const selectedVoice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
-            if(selectedVoice) ut.voice = selectedVoice;
-            ut.volume = document.getElementById('vol').value;
-            synth.speak(ut);
+
+            setTimeout(() => {
+                let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
+                const ut = new SpeechSynthesisUtterance(msg);
+                const selectedVoice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+                if(selectedVoice) ut.voice = selectedVoice;
+                ut.volume = document.getElementById('vol').value;
+                ut.rate = 0.9;
+                synth.speak(ut);
+            }, 150);
         }
 
         function tick() {
@@ -227,12 +234,13 @@
                     timeLeft = document.getElementById('repSlider').value * 60;
                 } else {
                     timeLeft--;
-                    timerDisplay.innerText = `NEXT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+                    timerDisplay.innerText = `NEXT ALERT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
                 }
             }
         }
 
         document.getElementById('testBtn').onclick = () => {
+            synth.cancel();
             const ut = new SpeechSynthesisUtterance("Audio Working");
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
