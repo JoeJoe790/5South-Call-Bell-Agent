@@ -3,32 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>High-Vis Nurse Monitor</title>
+    <title>Precision Nurse Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; display: flex; flex-direction: column; height: 100vh; }
-        
-        /* Camera Section */
         #video-container { position: relative; flex: 1; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 4px solid #ff3b30; border-radius: 8px; pointer-events: none; box-shadow: 0 0 15px rgba(255,59,48,0.5); }
 
-        /* GIANT DISPLAY AREA */
-        #dashboard { height: 40vh; background: #000; border-top: 2px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; position: relative; }
-        #room-display { font-weight: 900; color: #28cd41; text-align: center; width: 100%; line-height: 1; transition: all 0.2s; }
-        #timer-display { font-size: 1.2rem; color: #ffcc00; margin-top: 10px; font-weight: bold; }
+        #dashboard { height: 45vh; background: #000; border-top: 2px solid #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; position: relative; }
+        #room-display { font-weight: 900; color: #28cd41; text-align: center; width: 100%; line-height: 1; }
+        #timer-display { font-size: 1.2rem; color: #ffcc00; margin-top: 10px; font-weight: bold; min-height: 1.5rem; }
 
-        /* SETTINGS DRAWER */
-        #settings-menu { position: fixed; right: -300px; top: 0; width: 280px; height: 100%; background: rgba(20,20,20,0.95); z-index: 100; transition: 0.3s; padding: 20px; box-shadow: -5px 0 15px rgba(0,0,0,0.5); overflow-y: auto; }
+        #settings-menu { position: fixed; right: -320px; top: 0; width: 280px; height: 100%; background: rgba(15,15,15,0.98); z-index: 100; transition: 0.3s; padding: 20px; box-shadow: -5px 0 20px rgba(0,0,0,0.8); overflow-y: auto; border-left: 1px solid #444; }
         #settings-menu.open { right: 0; }
-        .setting-row { margin-bottom: 20px; }
-        label { display: block; color: #aaa; font-size: 0.8rem; margin-bottom: 5px; }
+        .setting-row { margin-bottom: 18px; }
+        label { display: block; color: #aaa; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
         input, select { width: 100%; }
 
-        /* BUTTONS */
-        #menu-toggle { position: absolute; top: 10px; right: 10px; background: #333; color: #fff; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; z-index: 101; }
-        #startBtn { background: #28cd41; color: white; border: none; padding: 20px; border-radius: 12px; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
-        .close-btn { background: #ff3b30; width: 100%; padding: 10px; border: none; color: white; border-radius: 8px; margin-top: 20px; }
+        #menu-toggle { position: absolute; top: 10px; right: 10px; background: rgba(51,51,51,0.8); color: #fff; border: 1px solid #555; padding: 10px 15px; border-radius: 8px; font-weight: bold; z-index: 101; }
+        #startBtn { background: #28cd41; color: white; border: none; padding: 20px 40px; border-radius: 12px; font-size: 1.5rem; font-weight: bold; }
+        .close-btn { background: #007aff; width: 100%; padding: 12px; border: none; color: white; border-radius: 8px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -36,24 +31,43 @@
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div id="scan-box"></div>
-        <button id="menu-toggle">⚙️ Settings</button>
+        <button id="menu-toggle">⚙️ SETUP</button>
     </div>
 
     <div id="dashboard">
-        <button id="startBtn">1. START SYSTEM</button>
+        <button id="startBtn">START SYSTEM</button>
         <div id="room-display"></div>
         <div id="timer-display"></div>
     </div>
 
     <div id="settings-menu">
-        <h3>Adjustments</h3>
-        <div class="setting-row"><button id="testBtn" style="width:100%; background:#007aff; color:white; padding:10px; border:none; border-radius:8px;">2. Test Voice</button></div>
-        <div class="setting-row"><label>Box Width</label><input type="range" id="boxW" min="50" max="400" value="200"></div>
-        <div class="setting-row"><label>Box Height</label><input type="range" id="boxH" min="30" max="300" value="80"></div>
-        <div class="setting-row"><label>Repeat (min)</label><input type="range" id="repSlider" min="1" max="10" value="2"><span id="repLabel">2m</span></div>
-        <div class="setting-row"><label>Voice Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
-        <div class="setting-row"><label>Voice Style</label><select id="voiceSelect"></select></div>
-        <button class="close-btn" onclick="toggleMenu()">Back to Screen</button>
+        <h3 style="margin-top:0; color:#28cd41;">Scanner Setup</h3>
+        
+        <div class="setting-row">
+            <label>Box Size (W x H)</label>
+            <input type="range" id="boxW" min="50" max="450" value="200">
+            <input type="range" id="boxH" min="30" max="350" value="80" style="margin-top:10px;">
+        </div>
+
+        <div class="setting-row">
+            <label>Position (Left/Right & Up/Down)</label>
+            <input type="range" id="boxX" min="-50" max="50" value="0">
+            <input type="range" id="boxY" min="-50" max="50" value="0" style="margin-top:10px;">
+        </div>
+
+        <div class="setting-row">
+            <label>Repeat Every: <span id="repLabel" style="color:#ffcc00;">2m</span></label>
+            <input type="range" id="repSlider" min="1" max="15" value="2">
+        </div>
+
+        <div class="setting-row">
+            <label>Voice & Volume</label>
+            <select id="voiceSelect" style="margin-bottom:10px; background:#222; color:white; border:1px solid #444; padding:5px;"></select>
+            <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
+        </div>
+
+        <button id="testBtn" style="width:100%; background:#444; color:white; padding:10px; border:none; border-radius:8px; margin-bottom:10px;">Test Sound</button>
+        <button class="close-btn" onclick="toggleMenu()">SAVE & CLOSE</button>
     </div>
 
     <script>
@@ -62,25 +76,33 @@
         const roomDisplay = document.getElementById('room-display');
         const timerDisplay = document.getElementById('timer-display');
         const menu = document.getElementById('settings-menu');
-        const boxW = document.getElementById('boxW');
-        const boxH = document.getElementById('boxH');
+        const boxW = document.getElementById('boxW'), boxH = document.getElementById('boxH');
+        const boxX = document.getElementById('boxX'), boxY = document.getElementById('boxY');
         const scanBox = document.getElementById('scan-box');
+        const repSlider = document.getElementById('repSlider');
+        const repLabel = document.getElementById('repLabel');
         
         let synth = window.speechSynthesis;
         let activeRooms = []; let lastSet = ""; let timeLeft = 0;
 
-        // Drawer Toggle
         function toggleMenu() { menu.classList.toggle('open'); }
         document.getElementById('menu-toggle').onclick = toggleMenu;
 
-        // Calibration
         const updateBox = () => {
             scanBox.style.width = boxW.value + 'px';
             scanBox.style.height = boxH.value + 'px';
+            // Offset from center
+            scanBox.style.marginLeft = boxX.value + '%';
+            scanBox.style.marginTop = boxY.value + '%';
         };
-        boxW.oninput = updateBox; boxH.oninput = updateBox; updateBox();
+        [boxW, boxH, boxX, boxY].forEach(el => el.oninput = updateBox);
+        updateBox();
 
-        // Voice Setup
+        repSlider.oninput = () => {
+            repLabel.innerText = repSlider.value + 'm';
+            if(activeRooms.length > 0) timeLeft = repSlider.value * 60; 
+        };
+
         function loadVoices() {
             document.getElementById('voiceSelect').innerHTML = synth.getVoices().map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
@@ -100,30 +122,42 @@
             setInterval(async () => {
                 const scale = video.videoWidth / video.clientWidth;
                 const w = boxW.value * scale, h = boxH.value * scale;
-                const x = (video.videoWidth - w)/2, y = (video.videoHeight - h)/2;
+                // Calculate capture position based on offsets
+                const centerX = video.videoWidth / 2;
+                const centerY = video.videoHeight / 2;
+                const offsetX = (boxX.value / 100) * video.videoWidth;
+                const offsetY = (boxY.value / 100) * video.videoHeight;
+                
+                const x = (centerX + offsetX) - (w / 2);
+                const y = (centerY + offsetY) - (h / 2);
+
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
+                
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
                 const found = (text.match(/\d{4}/g) || []).map(n => n.substring(2)).filter((v, i, a) => a.indexOf(v) === i && parseInt(v) <= 60).sort();
                 
                 activeRooms = found;
                 if (activeRooms.length > 0) {
                     updateDisplay();
-                    if (activeRooms.join(",") !== lastSet) { announce(); timeLeft = document.getElementById('repSlider').value * 60; lastSet = activeRooms.join(","); }
+                    if (activeRooms.join(",") !== lastSet) { 
+                        announce(); 
+                        timeLeft = repSlider.value * 60; 
+                        lastSet = activeRooms.join(","); 
+                    }
                 } else {
-                    roomDisplay.innerText = "READY"; roomDisplay.style.fontSize = "4rem";
-                    timerDisplay.innerText = ""; lastSet = "";
+                    roomDisplay.innerText = ""; 
+                    timerDisplay.innerText = ""; 
+                    lastSet = "";
                 }
             }, 1200);
         }
 
         function updateDisplay() {
             const count = activeRooms.length;
-            // Dynamic Font Sizing
             if (count === 1) roomDisplay.style.fontSize = "12rem";
             else if (count === 2) roomDisplay.style.fontSize = "8rem";
             else roomDisplay.style.fontSize = "5rem";
-            
             roomDisplay.innerText = activeRooms.join("  ");
         }
 
@@ -132,20 +166,25 @@
             synth.cancel();
             let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
             const ut = new SpeechSynthesisUtterance(msg);
-            ut.voice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            const selectedVoice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            if(selectedVoice) ut.voice = selectedVoice;
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
         }
 
         function tick() {
-            if (activeRooms.length > 0) {
-                if (timeLeft <= 0) { announce(); timeLeft = document.getElementById('repSlider').value * 60; }
-                else { timeLeft--; timerDisplay.innerText = `NEXT ALERT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`; }
+            if (activeRooms.length > 0 && timeLeft > 0) {
+                timeLeft--;
+                timerDisplay.innerText = `NEXT ALERT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+                if (timeLeft <= 0) {
+                    announce();
+                    timeLeft = repSlider.value * 60;
+                }
             }
         }
 
         document.getElementById('testBtn').onclick = () => {
-            const ut = new SpeechSynthesisUtterance("System Online");
+            const ut = new SpeechSynthesisUtterance("Testing Audio");
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
         };
