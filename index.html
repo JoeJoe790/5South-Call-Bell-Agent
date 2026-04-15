@@ -3,75 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Smart Call Bell - iOS Pro</title>
+    <title>Smart Call Bell - iOS Pro Max</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
-            --bg: #000000; /* iOS True Black */
-            --tile: #1c1c1e; /* iOS Dark Card */
-            --accent-red: #ff453a; /* iOS Vibrant Red */
-            --accent-green: #30d158; /* iOS Vibrant Green */
-            --accent-amber: #ff9f0a; /* iOS Vibrant Amber */
+            --bg: #000000; 
+            --tile: #1c1c1e; 
+            --accent-red: #ff453a; 
+            --accent-green: #30d158; 
+            --accent-amber: #ff9f0a; 
             --text-main: #ffffff;
             --text-dim: #8e8e93;
         }
         
-        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        /* Layout logic based on your landscape/portrait requirements */
         @media (orientation: landscape) {
             body { flex-direction: row; }
-            #video-container { flex: 1.4; height: 100vh; padding: 10px; box-sizing: border-box; }
-            #video-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; }
-            #dashboard { flex: 0.6; height: 100vh; padding: 10px 10px 10px 0; overflow-y: auto; justify-content: flex-start; }
-            .room-number { font-size: 10vw !important; }
-            #interaction-bar { flex-direction: column; }
+            #video-container { flex: 1.2; height: 100vh; padding: 10px; }
+            #dashboard { flex: 0.8; height: 100vh; padding: 10px; }
         }
 
         @media (orientation: portrait) {
-            #video-container { flex: 1; width: 100vw; padding: 10px; box-sizing: border-box; }
-            #video-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; }
-            #dashboard { flex: 1; padding: 0 10px 10px 10px; }
-            .room-number { font-size: 20vw !important; }
-            #interaction-bar { flex-direction: row; }
+            #video-container { flex: 0.8; width: 100vw; padding: 10px; }
+            #dashboard { flex: 1.2; padding: 10px; }
         }
 
-        /* Camera & Scan UI */
-        #video-container { display: flex; align-items: center; justify-content: center; }
+        #video-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 12px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,69,58,0.3); }
-        #scan-box::after { content: '●'; color: var(--accent-red); position: absolute; top: -10px; right: -5px; font-size: 20px; }
+        #scan-box { position: absolute; border: 3px solid var(--accent-red); border-radius: 8px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,69,58,0.5); }
 
-        /* Dashboard & Cards */
-        #dashboard { display: flex; flex-direction: column; position: relative; gap: 10px; }
-        .tile { background: var(--tile); border-radius: 20px; padding: 15px; display: flex; flex-direction: column; justify-content: center; }
-        .label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+        #dashboard { display: flex; flex-direction: column; gap: 12px; }
         
-        #room-list-container { flex-grow: 1; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; overflow-y: auto; }
-        .room-tile { flex: 1 1 calc(50% - 5px); min-width: calc(50% - 5px); aspect-ratio: 1; }
-        .room-number { font-weight: 900; color: var(--text-main); text-align: center; line-height: 1; letter-spacing: -2px; }
-        
-        #interaction-bar { display: flex; gap: 10px; }
-        #timer-tile { flex: 1; color: var(--accent-amber); align-items: center; text-align: center; font-family: monospace; font-size: 16px; font-weight: bold; }
-        
-        #startBtn { flex: 1; border: none; padding: 15px; border-radius: 20px; font-size: 16px; font-weight: bold; cursor: pointer; color: #000; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .power-icon { font-size: 20px; }
+        /* THE BIG ROOM DISPLAY */
+        #room-list-container { 
+            flex-grow: 1; 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 12px; 
+            width: 100%;
+        }
 
-        /* Settings Overlay */
-        #settings-panel { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(28, 28, 30, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 20px; padding: 15px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); display: none; max-height: 80vh; overflow-y: auto; }
+        .room-tile { 
+            background: var(--tile); 
+            border-radius: 24px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .room-label { font-size: 14px; font-weight: 800; color: var(--accent-green); letter-spacing: 2px; margin-bottom: -10px; }
+        /* Dynamic Font Size for visibility */
+        .room-number { font-size: clamp(80px, 20vw, 180px); font-weight: 900; line-height: 1; letter-spacing: -4px; }
+
+        /* BOTTOM CONTROLS */
+        #interaction-bar { display: flex; gap: 12px; min-height: 100px; }
+        .control-tile { background: var(--tile); border-radius: 24px; padding: 15px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        #timer-display { font-family: monospace; font-size: 32px; font-weight: bold; color: var(--accent-amber); }
+        #startBtn { flex: 1.5; border: none; border-radius: 24px; font-size: 20px; font-weight: 800; cursor: pointer; color: #000; transition: 0.2s; }
+
+        /* SETTINGS: Labels on the Left */
+        #settings-panel { 
+            position: absolute; top: 15px; left: 15px; right: 15px; 
+            background: rgba(28, 28, 30, 0.95); backdrop-filter: blur(20px); 
+            border-radius: 24px; padding: 20px; z-index: 100; display: none; 
+            border: 1px solid rgba(255,255,255,0.1); 
+        }
         #settings-panel.open { display: block; }
         
-        .setting-item { margin-bottom: 12px; }
-        .setting-item label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: bold; }
-        
-        input[type=range] { -webkit-appearance: none; width: 100%; background: #3a3a3c; height: 5px; border-radius: 2.5px; outline: none; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #fff; border-radius: 50%; cursor: pointer; border: 1px solid #d1d1d6; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .setting-row { display: flex; align-items: center; margin-bottom: 15px; gap: 15px; }
+        .setting-row label { flex: 0 0 100px; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
+        .setting-row input { flex: 1; }
 
-        #menu-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 15px; border-radius: 12px; z-index: 101; font-weight: bold; font-size: 12px; cursor: pointer; backdrop-filter: blur(5px); }
-        
-        #status-indicator { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; justify-content: center; margin-top: 5px; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #444; display: inline-block; margin-right: 5px; transition: 0.2s; }
-        .status-active .status-dot { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+        #menu-btn { position: absolute; top: 25px; right: 25px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 18px; border-radius: 15px; z-index: 101; font-weight: bold; cursor: pointer; }
+
+        input[type=range] { -webkit-appearance: none; background: #3a3a3c; height: 6px; border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; background: #fff; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
@@ -80,67 +90,38 @@
         <div id="video-card">
             <video id="video" autoplay playsinline></video>
             <div id="scan-box"></div>
-            <button id="menu-btn" onclick="toggleSettings()">⚙️ SETTINGS</button>
+            <button id="menu-btn" onclick="toggleSettings()">SETTINGS</button>
             
             <div id="settings-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <span style="font-weight: bold; font-size: 14px;">Calibration</span>
-                    <button onclick="toggleSettings()" style="background:none; border:none; color:var(--accent-red); font-weight:bold;">DONE</button>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <span style="font-weight: bold; color: var(--accent-green);">CALIBRATION</span>
+                    <button onclick="toggleSettings()" style="background:none; border:none; color:var(--accent-red); font-weight:bold; cursor:pointer;">DONE</button>
                 </div>
                 
-                <div class="setting-item">
-                    <label>SCAN AREA SIZE</label>
-                    <input type="range" id="boxW" min="50" max="800" value="300">
-                    <input type="range" id="boxH" min="20" max="400" value="65" style="margin-top:10px;">
-                </div>
+                <div class="setting-row"> <label>Width</label> <input type="range" id="boxW" min="50" max="800" value="320"> </div>
+                <div class="setting-row"> <label>Height</label> <input type="range" id="boxH" min="20" max="400" value="70"> </div>
+                <div class="setting-row"> <label>X-Pos</label> <input type="range" id="boxX" min="-50" max="50" value="0"> </div>
+                <div class="setting-row"> <label>Y-Pos</label> <input type="range" id="boxY" min="-50" max="50" value="0"> </div>
+                <div class="setting-row"> <label>Contrast</label> <input type="range" id="threshold" min="50" max="220" value="130"> </div>
+                <div class="setting-row"> <label>Repeat</label> <input type="range" id="repSlider" min="1" max="15" value="2"> </div>
                 
-                <div class="setting-item">
-                    <label>SCAN AREA POSITION</label>
-                    <input type="range" id="boxX" min="-50" max="50" value="0">
-                    <input type="range" id="boxY" min="-50" max="50" value="0" style="margin-top:10px;">
-                </div>
-
-                <div class="setting-item">
-                    <label>IMAGE CONTRAST</label>
-                    <input type="range" id="threshold" min="50" max="220" value="135">
-                </div>
-
-                <div class="setting-item">
-                    <label>ALERT REPEAT: <span id="repLabel" style="color: var(--accent-amber)">2m</span></label>
-                    <input type="range" id="repSlider" min="1" max="15" value="2">
-                </div>
-
-                <div class="setting-item">
-                    <label>VOICE & VOLUME</label>
-                    <select id="voiceSelect" style="width:100%; background:#2c2c2e; color:white; border:none; padding:10px; border-radius:10px; margin-bottom:8px; font-size:12px;"></select>
-                    <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
-                </div>
-                
-                <button id="testBtn" style="width:100%; background:var(--tile); color:white; border:1px solid #3a3a3c; padding:12px; border-radius:12px; font-weight:bold; margin-top:5px;">TEST AUDIO</button>
+                <select id="voiceSelect" style="width:100%; background:#2c2c2e; color:white; border:none; padding:12px; border-radius:12px; margin-top:10px;"></select>
+                <button id="testBtn" style="width:100%; background:rgba(255,255,255,0.1); color:white; border:none; padding:12px; border-radius:12px; font-weight:bold; margin-top:10px; cursor:pointer;">TEST AUDIO</button>
             </div>
         </div>
     </div>
 
     <div id="dashboard">
-        <div class="label" style="padding-left: 10px;">Call Detection</div>
         <div id="room-list-container">
-            <div class="tile room-tile" style="align-items: center; aspect-ratio: auto;">
-                <div class="room-number">--</div>
-            </div>
+            <div class="room-tile"><div class="room-number" style="color:#333;">--</div></div>
         </div>
 
         <div id="interaction-bar">
-            <div id="timer-tile" class="tile">
-                <div class="label" style="color: var(--accent-amber)">NEXT ALERT</div>
+            <div class="control-tile">
+                <div style="font-size: 10px; font-weight: 800; color: var(--accent-amber); margin-bottom: 4px;">REPEAT IN</div>
                 <div id="timer-display">--:--</div>
             </div>
-            <button id="startBtn" style="background: var(--accent-green);">
-                <span class="power-icon">⏻</span> START SYSTEM
-            </button>
-        </div>
-
-        <div id="status-indicator">
-            <div class="status-dot"></div> <span id="status-text">SYSTEM STANDBY</span>
+            <button id="startBtn" style="background: var(--accent-green);">START SYSTEM</button>
         </div>
     </div>
 
@@ -149,197 +130,121 @@
         const startBtn = document.getElementById('startBtn');
         const roomDisplay = document.getElementById('room-list-container');
         const timerDisplay = document.getElementById('timer-display');
-        const statusText = document.getElementById('status-text');
-        const statusContainer = document.getElementById('status-indicator');
-        const panel = document.getElementById('settings-panel');
-        const boxW = document.getElementById('boxW'), boxH = document.getElementById('boxH');
-        const boxX = document.getElementById('boxX'), boxY = document.getElementById('boxY');
-        const thresholdInput = document.getElementById('threshold');
         const scanBox = document.getElementById('scan-box');
         
         let synth = window.speechSynthesis;
         let activeRooms = []; let lastSet = ""; let timeLeft = 0;
-        let isRunning = false;
-        let scanInterval;
-        let tickInterval;
+        let isRunning = false; let scanInterval, tickInterval;
 
-        function toggleSettings() { panel.classList.toggle('open'); }
+        function toggleSettings() { document.getElementById('settings-panel').classList.toggle('open'); }
 
         const updateBox = () => {
-            scanBox.style.width = boxW.value + 'px';
-            scanBox.style.height = boxH.value + 'px';
-            scanBox.style.left = `calc(50% + ${boxX.value}% - ${boxW.value/2}px)`;
-            scanBox.style.top = `calc(50% + ${boxY.value}% - ${boxH.value/2}px)`;
+            const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value;
+            const x = document.getElementById('boxX').value, y = document.getElementById('boxY').value;
+            scanBox.style.width = w + 'px';
+            scanBox.style.height = h + 'px';
+            scanBox.style.left = `calc(50% + ${x}% - ${w/2}px)`;
+            scanBox.style.top = `calc(50% + ${y}% - ${h/2}px)`;
         };
-        [boxW, boxH, boxX, boxY].forEach(el => el.oninput = updateBox);
+        document.querySelectorAll('input').forEach(i => i.oninput = updateBox);
         updateBox();
-
-        document.getElementById('repSlider').oninput = (e) => { 
-            document.getElementById('repLabel').innerText = e.target.value + 'm'; 
-        };
 
         function loadVoices() {
             const voices = synth.getVoices();
-            document.getElementById('voiceSelect').innerHTML = voices
-                .map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            document.getElementById('voiceSelect').innerHTML = voices.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = loadVoices;
-        }
-        loadVoices();
+        speechSynthesis.onvoiceschanged = loadVoices; loadVoices();
 
         startBtn.onclick = async () => {
-            if (isRunning) {
-                stopSystem();
-                return;
-            }
-
-            // Primitive Audio Nudge for Mobile
-            const v = new SpeechSynthesisUtterance("");
-            synth.speak(v);
+            if (isRunning) { location.reload(); return; }
             try {
-                const s = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
-                    audio: false 
-                });
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
                 video.srcObject = s;
                 isRunning = true;
-                startBtn.style.background = 'var(--accent-red)';
-                startBtn.innerHTML = '<span class="power-icon">⏹</span> STOP SYSTEM';
-                statusText.innerText = "MONITORING ACTIVE";
+                startBtn.innerText = "STOP SYSTEM";
+                startBtn.style.background = "var(--accent-red)";
                 startScanning();
                 tickInterval = setInterval(tick, 1000);
-            } catch (err) {
-                alert("Camera Error. Please use HTTPS and allow camera access.");
-            }
+            } catch (e) { alert("Camera access required."); }
         };
-
-        function stopSystem() {
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-                video.srcObject = null;
-            }
-            isRunning = false;
-            clearInterval(scanInterval);
-            clearInterval(tickInterval);
-            startBtn.style.background = 'var(--accent-green)';
-            startBtn.innerHTML = '<span class="power-icon">⏻</span> START SYSTEM';
-            statusText.innerText = "SYSTEM STANDBY";
-            resetDisplay();
-        }
 
         async function startScanning() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            
             scanInterval = setInterval(async () => {
-                if (!isRunning || !video.videoWidth || video.readyState < 2) return;
+                if (!isRunning || !video.videoWidth) return;
                 
                 const scaleX = video.videoWidth / video.offsetWidth;
                 const scaleY = video.videoHeight / video.offsetHeight;
-                const w = boxW.value * scaleX;
-                const h = boxH.value * scaleY;
-                const x = (video.videoWidth / 2) + ((boxX.value / 100) * video.videoWidth) - (w / 2);
-                const y = (video.videoHeight / 2) + ((boxY.value / 100) * video.videoHeight) - (h / 2);
+                const w = document.getElementById('boxW').value * scaleX;
+                const h = document.getElementById('boxH').value * scaleY;
+                const x = (video.videoWidth/2) + ((document.getElementById('boxX').value/100)*video.videoWidth) - (w/2);
+                const y = (video.videoHeight/2) + ((document.getElementById('boxY').value/100)*video.videoHeight) - (h/2);
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
-                
-                let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                let data = imageData.data;
-                let thresh = thresholdInput.value;
-                for (let i = 0; i < data.length; i += 4) {
-                    let avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-                    let val = avg > thresh ? 255 : 0;
-                    data[i] = data[i + 1] = data[i + 2] = val;
+
+                // Contrast Filter
+                let imgData = ctx.getImageData(0,0,w,h);
+                let d = imgData.data; let th = document.getElementById('threshold').value;
+                for (let i=0; i<d.length; i+=4) {
+                    let avg = (d[i]+d[i+1]+d[i+2])/3;
+                    d[i] = d[i+1] = d[i+2] = avg > th ? 255 : 0;
                 }
-                ctx.putImageData(imageData, 0, 0);
+                ctx.putImageData(imgData, 0, 0);
 
-                statusContainer.classList.add('status-active');
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                statusContainer.classList.remove('status-active');
-
-                // Logic: Grab digits 3 and 4 of any 4 or 5 digit number
                 const matches = text.match(/\d{4,5}/g) || [];
-                const filtered = matches
-                    .map(num => num.substring(2, 4)) 
-                    .filter((v, i, a) => a.indexOf(v) === i && parseInt(v) > 0)
-                    .sort();
-                
+                const filtered = matches.map(n => n.substring(2,4)).filter((v,i,a) => a.indexOf(v)===i && parseInt(v)>0).sort();
+
                 if (filtered.length > 0) {
                     activeRooms = filtered;
-                    updateDisplay();
-                    if (activeRooms.join(",") !== lastSet) { 
+                    updateUI();
+                    if (activeRooms.join(",") !== lastSet) {
                         lastSet = activeRooms.join(",");
-                        announce(); 
-                        timeLeft = document.getElementById('repSlider').value * 60; 
+                        announce();
+                        timeLeft = document.getElementById('repSlider').value * 60;
                     }
                 } else {
-                    resetDisplay();
-                    lastSet = "";
                     activeRooms = [];
+                    roomDisplay.innerHTML = `<div class="room-tile"><div class="room-number" style="color:#222;">--</div></div>`;
                 }
-            }, 1800);
+            }, 2000);
         }
 
-        function resetDisplay() {
-            roomDisplay.innerHTML = `<div class="tile room-tile" style="align-items: center; aspect-ratio: auto;"><div class="room-number">--</div></div>`;
-            timerDisplay.innerText = "--:--";
-        }
-
-        function updateDisplay() {
-            if (activeRooms.length === 0) {
-                resetDisplay();
-                return;
-            }
-            let html = activeRooms.map(r => `
-                <div class="tile room-tile">
-                    <div class="label">ROOM</div>
+        function updateUI() {
+            roomDisplay.innerHTML = activeRooms.map(r => `
+                <div class="room-tile">
+                    <div class="room-label">CALL</div>
                     <div class="room-number">${r}</div>
                 </div>
             `).join('');
-            roomDisplay.innerHTML = html;
         }
 
         function announce() {
             if (activeRooms.length === 0) return;
             synth.cancel();
-            setTimeout(() => {
-                let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
-                const ut = new SpeechSynthesisUtterance(msg);
-                const voices = synth.getVoices();
-                const selectedVoice = voices.find(v => v.name === document.getElementById('voiceSelect').value);
-                if(selectedVoice) ut.voice = selectedVoice;
-                ut.volume = document.getElementById('vol').value;
-                ut.rate = 0.9;
-                synth.speak(ut);
-            }, 150);
+            let msg = new SpeechSynthesisUtterance((activeRooms.length > 1 ? "Rooms " : "Room ") + activeRooms.join(" and "));
+            const voice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            if(voice) msg.voice = voice;
+            msg.rate = 0.85;
+            synth.speak(msg);
         }
 
         function tick() {
-            if (!isRunning) return;
             if (activeRooms.length > 0) {
-                if (timeLeft <= 0) {
-                    announce();
-                    timeLeft = document.getElementById('repSlider').value * 60;
-                } else {
-                    timeLeft--;
-                    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-                    const s = (timeLeft % 60).toString().padStart(2, '0');
-                    timerDisplay.innerText = `${m}:${s}`;
+                if (timeLeft <= 0) { announce(); timeLeft = document.getElementById('repSlider').value * 60; }
+                else { 
+                    timeLeft--; 
+                    timerDisplay.innerText = Math.floor(timeLeft/60).toString().padStart(2,'0') + ":" + (timeLeft%60).toString().padStart(2,'0');
                 }
-            } else {
-                timerDisplay.innerText = "WAITING";
-            }
+            } else { timerDisplay.innerText = "WAITING"; }
         }
 
         document.getElementById('testBtn').onclick = () => {
             synth.cancel();
-            const ut = new SpeechSynthesisUtterance("Audio check successful");
-            ut.volume = document.getElementById('vol').value;
-            synth.speak(ut);
+            synth.speak(new SpeechSynthesisUtterance("Audio check. Volume normal."));
         };
-        window.addEventListener("resize", updateDisplay);
     </script>
 </body>
 </html>
