@@ -3,53 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>Smart Call Bell - Offline Pro</title>
-    <script src="tesseract.min.js"></script>
+    <title>Smart Call Bell - iOS Pro v6</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
             --bg: #000000; --tile: #1c1c1e; --tile-text: #ffffff;
             --accent-red: #ff453a; --accent-green: #30d158; --accent-amber: #ff9f0a; 
-            --text-main: #ffffff; --text-dim: #8e8e93;
+            --text-main: #ffffff; --text-dim: #8e8e93; --ui-border: #333;
         }
-        /* Light Mode Variables */
+        
+        /* Light Mode Styles */
         body.light-mode {
             --bg: #f2f2f7; --tile: #ffffff; --tile-text: #1c1c1e;
-            --text-main: #1c1c1e; --text-dim: #3a3a3c;
+            --text-main: #1c1c1e; --text-dim: #3a3a3c; --ui-border: #d1d1d6;
         }
 
-        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, sans-serif; overflow: hidden; height: 100dvh; transition: background 0.3s; }
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; transition: background 0.3s; }
         
         #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
         
         #cam-area { height: 35dvh; padding: 10px; box-sizing: border-box; z-index: 10; }
-        #cam-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; border: 1px solid #333; }
+        #cam-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; border: 1px solid var(--ui-border); }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 6px; pointer-events: none; z-index: 20; }
         
         #room-area { height: 53dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 10px; }
-        .room-tile { background: var(--tile); width: 95%; height: 45%; border-radius: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .room-num { font-weight: 900; line-height: 1; letter-spacing: -5px; color: var(--tile-text); }
+        .room-tile { background: var(--tile); width: 95%; height: 45%; border-radius: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: background 0.3s; }
+        .room-num { font-weight: 900; line-height: 1; letter-spacing: -5px; color: var(--tile-text); margin: 0; }
 
-        #bottom-controls { height: 12dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; padding: 10px 15px; border-top: 1px solid #444; }
-        .control-tile { background: var(--tile); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #444; font-weight: 800; font-size: 11px; color: var(--text-main); }
+        #bottom-controls { height: 12dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--ui-border); }
+        .control-tile { background: var(--tile); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; color: var(--text-main); }
         
-        /* Floating Draggable Settings */
-        #settings-card { 
-            position: absolute; top: 15%; left: 4%; width: 92%; height: 65dvh; 
-            background: rgba(28,28,30,0.85); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); 
-            border-radius: 35px; border: 1px solid #555; padding: 20px; 
-            box-sizing: border-box; display: none; z-index: 2000; touch-action: none;
-        }
-        #settings-card.open { display: block; }
-        .drag-handle { width: 100%; height: 30px; display: flex; justify-content: center; align-items: center; cursor: move; margin-bottom: 10px; }
-        .drag-bar { width: 40px; height: 5px; background: #666; border-radius: 10px; }
-
-        .s-row { display: flex; align-items: center; margin-bottom: 15px; gap: 10px; }
-        .s-row label { flex: 0 0 100px; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
-        input[type=range] { flex: 1; }
-        .theme-btn { background: var(--accent-amber); color: black; padding: 10px; border-radius: 12px; border: none; font-weight: bold; width: 100%; margin-bottom: 10px; }
-
+        #settings-overlay { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; z-index: 1000; background: rgba(0,0,0,0.4); }
+        #settings-overlay.open { display: flex; }
+        #settings-card { width: 92%; height: 75dvh; background: var(--tile); border-radius: 35px; border: 1px solid var(--ui-border); padding: 25px; overflow-y: auto; box-sizing: border-box; }
+        
+        .s-row { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
+        .s-row label { flex: 0 0 120px; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
+        input[type=range] { flex: 1; height: 10px; -webkit-appearance: none; background: #444; border-radius: 5px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-amber); border: none; }
+        
+        select, .btn-action { background: #333; color: white; border: 1px solid #444; padding: 12px; border-radius: 14px; flex: 1; font-weight: bold; }
+        .btn-theme { background: var(--accent-amber); color: black; border: none; width: 100%; padding: 14px; border-radius: 16px; font-weight: 800; margin-bottom: 15px; }
+        .btn-test { background: var(--accent-green); color: black; border: none; width: 100%; padding: 14px; border-radius: 16px; font-weight: 800; }
+        
         #cfg-toggle { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px 14px; border-radius: 12px; font-size: 10px; font-weight: bold; z-index: 30; }
+
+        @media (orientation: landscape) {
+            #main-wrapper { flex-direction: row; }
+            #cam-area { width: 40vw; height: 100dvh; }
+            #right-pane { width: 60vw; height: 100dvh; display: flex; flex-direction: column; }
+            #room-area { height: 80%; }
+            #bottom-controls { height: 20%; }
+        }
     </style>
 </head>
 <body>
@@ -65,52 +71,81 @@
     <div id="right-pane">
         <div id="room-area"><div class="room-tile"><div class="room-num" style="color:#666; font-size: 80px;">--</div></div></div>
         <div id="bottom-controls">
-            <div class="control-tile" style="color:var(--accent-amber);">TIMER<div id="timer-clock">00:00</div></div>
+            <div class="control-tile" style="color:var(--accent-amber);"><span style="font-size: 8px; opacity: 0.7;">REMAINING</span><div id="timer-clock">00:00</div></div>
             <button id="mainBtn" class="control-tile" style="background:var(--accent-green); color:black;" onclick="handlePower()">START</button>
             <button id="muteBtn" class="control-tile" style="color:var(--accent-amber);" onclick="toggleMute()">MUTE</button>
         </div>
     </div>
+</div>
 
+<div id="settings-overlay">
     <div id="settings-card">
-        <div class="drag-handle" id="dragHeader"><div class="drag-bar"></div></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0; color:var(--accent-green)">Calibration</h3>
-            <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:bold;">CLOSE</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="color:var(--accent-green); margin:0;">Calibration</h2>
+            <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size: 16px;">CLOSE</button>
         </div>
-        
-        <button class="theme-btn" onclick="toggleTheme()">SWITCH TO LIGHT/DARK</button>
-        
+
+        <button class="btn-theme" onclick="toggleTheme()">SWITCH LIGHT/DARK MODE</button>
+
         <div class="s-row"><label>Box Width</label><input type="range" id="boxW" min="50" max="1000" value="380"></div>
         <div class="s-row"><label>Box Height</label><input type="range" id="boxH" min="20" max="500" value="90"></div>
+        <div class="s-row"><label>Horizontal</label><input type="range" id="boxX" min="-50" max="50" value="0"></div>
         <div class="s-row"><label>Vertical</label><input type="range" id="boxY" min="-50" max="50" value="0"></div>
-        <div class="s-row"><label>Repeat Alert</label><input type="range" id="repeat" min="1" max="15" value="3"></div>
+        <div class="s-row"><label>Contrast</label><input type="range" id="thresh" min="50" max="220" value="140"></div>
+        <div class="s-row"><label>Repeat Alert</label><input type="range" id="repeat" min="1" max="15" value="3"><span id="vR" style="color:var(--accent-amber); font-weight:bold; width: 40px; text-align: right;">3m</span></div>
         <div class="s-row"><label>Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="0.9"></div>
-        <select id="voiceSel" style="width:100%; padding:10px; border-radius:10px; background:#333; color:white;"></select>
+        <div class="s-row"><label>Choose Voice</label><select id="voiceSel"></select></div>
+        <button class="btn-test" onclick="testAudio()">TEST AUDIO</button>
     </div>
 </div>
 
 <script>
     const video = document.getElementById('video'), roomArea = document.getElementById('room-area');
-    const settingsCard = document.getElementById('settings-card'), dragHeader = document.getElementById('dragHeader');
-    let isRunning = false, activeRooms = [], lastSetString = "", countdown = 0, engine, stream;
+    const timerClock = document.getElementById('timer-clock'), scanBox = document.getElementById('scan-box');
+    const mainBtn = document.getElementById('mainBtn'), muteBtn = document.getElementById('muteBtn'), voiceSel = document.getElementById('voiceSel');
+    let synth = window.speechSynthesis, activeRooms = [], lastSetString = "", countdown = 0, isRunning = false, isMuted = false, engine, stream, voices = [];
 
-    // DRAG LOGIC FOR SETTINGS
-    let offset = [0,0], isDown = false;
-    dragHeader.addEventListener('touchstart', (e) => {
-        isDown = true;
-        offset = [settingsCard.offsetLeft - e.touches[0].clientX, settingsCard.offsetTop - e.touches[0].clientY];
-    }, true);
-    document.addEventListener('touchend', () => isDown = false, true);
-    document.addEventListener('touchmove', (e) => {
-        if (!isDown) return;
-        settingsCard.style.left = (e.touches[0].clientX + offset[0]) + 'px';
-        settingsCard.style.top  = (e.touches[0].clientY + offset[1]) + 'px';
-    }, true);
-
-    function toggleCfg() { settingsCard.classList.toggle('open'); }
+    function toggleCfg() { document.getElementById('settings-overlay').classList.toggle('open'); }
+    
+    // THEME TOGGLE FUNCTION
     function toggleTheme() { document.body.classList.toggle('light-mode'); }
 
-    // RETAIN THE 3RD & 4TH DIGIT LOGIC
+    function loadVoices() {
+        voices = synth.getVoices().filter(v => v.lang.includes('en'));
+        voiceSel.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name}</option>`).join('');
+    }
+    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices; 
+    loadVoices();
+
+    function updateSettings() {
+        const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value;
+        const x = document.getElementById('boxX').value, y = document.getElementById('boxY').value;
+        scanBox.style.width = w + 'px'; scanBox.style.height = h + 'px';
+        scanBox.style.left = `calc(50% + ${x}% - ${w/2}px)`; 
+        scanBox.style.top = `calc(50% + ${y}% - ${h/2}px)`;
+        document.getElementById('vR').innerText = document.getElementById('repeat').value + 'm';
+        render();
+    }
+    document.querySelectorAll('input').forEach(i => i.oninput = updateSettings); 
+    updateSettings();
+
+    async function handlePower() {
+        if (!isRunning) {
+            try {
+                if (synth.paused) synth.resume();
+                testAudio(); 
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
+                video.srcObject = stream; isRunning = true; 
+                mainBtn.innerText = "STOP"; mainBtn.style.background = "var(--accent-red)";
+                startEngine(); setInterval(tick, 1000);
+            } catch (e) { alert("Camera access denied."); }
+        } else {
+            location.reload(); // Safer stop for mobile browsers
+        }
+    }
+
+    function toggleMute() { isMuted = !isMuted; muteBtn.innerText = isMuted ? "UNMUTE" : "MUTE"; muteBtn.style.color = isMuted ? "var(--accent-red)" : "var(--accent-amber)"; }
+
     function startEngine() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -118,54 +153,74 @@
             if (!isRunning || !video.videoWidth) return;
             const sx = video.videoWidth/video.offsetWidth, sy = video.videoHeight/video.offsetHeight;
             const w = document.getElementById('boxW').value*sx, h = document.getElementById('boxH').value*sy;
-            const x = (video.videoWidth/2)- (w/2);
+            const x = (video.videoWidth/2)+((document.getElementById('boxX').value/100)*video.videoWidth)-(w/2);
             const y = (video.videoHeight/2)+((document.getElementById('boxY').value/100)*video.videoHeight)-(h/2);
             canvas.width = w; canvas.height = h; ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
             
             const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+            
+            // YOUR ORIGINAL 3rd/4th DIGIT LOGIC
             const found = (text.match(/\d{4,5}/g) || [])
                 .map(n => n.substring(2, 4)) 
-                .filter((v,i,a) => v.length === 2 && a.indexOf(v)===i).sort();
+                .filter((v,i,a) => v.length === 2 && a.indexOf(v)===i)
+                .sort();
             
             if (found.length > 0) {
-                if (found.join(",") !== lastSetString) {
-                    activeRooms = found; lastSetString = found.join(",");
-                    render(); announce();
+                const newSetString = found.join(",");
+                if (newSetString !== lastSetString) {
+                    activeRooms = found;
+                    lastSetString = newSetString;
+                    render();
+                    announce(); 
                     countdown = document.getElementById('repeat').value * 60;
                 }
+            } else {
+                activeRooms = []; lastSetString = "";
+                roomArea.innerHTML = `<div class="room-tile"><div class="room-num" style="color:#666; font-size: 80px;">--</div></div>`;
             }
         }, 2200);
     }
 
-    async function handlePower() {
-        if (!isRunning) {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            video.srcObject = stream; isRunning = true;
-            document.getElementById('mainBtn').innerText = "STOP";
-            startEngine(); setInterval(tick, 1000);
-        } else {
-            location.reload(); // Hard stop for offline stability
-        }
-    }
-
     function render() {
-        roomArea.innerHTML = activeRooms.map(r => `<div class="room-tile"><div class="room-num" style="font-size:25dvh">${r}</div></div>`).join('');
+        const count = activeRooms.length, isL = window.innerWidth > window.innerHeight;
+        const fs = isL ? (count === 1 ? '55dvh' : '30dvh') : (count === 1 ? '35dvh' : '22dvh');
+        if(activeRooms.length === 0) {
+             roomArea.innerHTML = `<div class="room-tile"><div class="room-num" style="color:#666; font-size: 80px;">--</div></div>`;
+             return;
+        }
+        roomArea.innerHTML = activeRooms.map(r => `
+            <div class="room-tile">
+                <div class="room-num" style="font-size: ${fs}">${r}</div>
+            </div>
+        `).join('');
     }
 
     function announce() {
+        if (activeRooms.length === 0 || isMuted) return;
+        synth.cancel();
         const msg = new SpeechSynthesisUtterance("Room " + activeRooms.join(", "));
+        if(voices.length > 0) msg.voice = voices[voiceSel.value];
         msg.volume = document.getElementById('vol').value;
-        window.speechSynthesis.speak(msg);
+        synth.speak(msg);
+    }
+
+    function testAudio() { 
+        const msg = new SpeechSynthesisUtterance("Voice engine active");
+        if(voices.length > 0) msg.voice = voices[voiceSel.value];
+        msg.volume = 0.2;
+        synth.speak(msg); 
     }
 
     function tick() {
-        if (activeRooms.length > 0 && countdown > 0) {
-            countdown--;
-            document.getElementById('timer-clock').innerText = Math.floor(countdown/60) + ":" + (countdown%60);
-        } else if (activeRooms.length > 0) {
-            announce(); countdown = document.getElementById('repeat').value * 60;
-        }
+        if (activeRooms.length > 0 && isRunning) {
+            if (countdown <= 0) { announce(); countdown = document.getElementById('repeat').value * 60; }
+            else { 
+                countdown--; 
+                timerClock.innerText = Math.floor(countdown/60).toString().padStart(2,'0') + ":" + (countdown%60).toString().padStart(2,'0'); 
+            }
+        } else { timerClock.innerText = "00:00"; }
     }
+    window.addEventListener('resize', render);
 </script>
 </body>
 </html>
