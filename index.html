@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Smart Call Bell - iOS Pro v4</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    <title>Smart Call Bell - Safari Optimized</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
@@ -12,172 +12,199 @@
             --accent-red: #ff453a; 
             --accent-green: #30d158; 
             --accent-amber: #ff9f0a; 
+            --accent-purple: #af52de;
             --text-main: #ffffff;
-            --text-dim: #8e8e93;
         }
         
-        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        /* Using dvh (dynamic viewport height) to account for Safari bars */
+        body { 
+            margin: 0; 
+            background: var(--bg); 
+            color: var(--text-main); 
+            font-family: -apple-system, system-ui, sans-serif; 
+            overflow: hidden; 
+            height: 100dvh; 
+            display: flex; 
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom); /* iOS Safe Area */
+        }
         
-        /* THE STABLE SPLIT LAYOUT - Fixed camera, fixed dashboard */
-        #video-container { height: 40vh; padding: 10px; box-sizing: border-box; }
-        #dashboard-fixed { height: 60vh; padding: 10px 10px 20px 10px; display: flex; flex-direction: column; box-sizing: border-box; }
-
-        #video-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; }
+        /* TOP: FIXED CAMERA */
+        #cam-area { height: 35dvh; padding: 10px; box-sizing: border-box; flex-shrink: 0; }
+        #cam-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; background: #111; border: 1px solid #333; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        #scan-box { position: absolute; border: 3px solid var(--accent-red); border-radius: 8px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,69,58,0.5); }
+        #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 4px; pointer-events: none; z-index: 5; }
 
-        /* THE ROOM GRID - DYNAMIC & ALWAYS STACKED */
-        #room-container { 
+        /* MIDDLE: SCROLLABLE ROOMS */
+        #room-list-container { 
             flex-grow: 1; 
+            overflow-y: auto; /* Allow scrolling if rooms overflow */
+            padding: 10px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 15px; 
-            overflow: hidden; /* Important: preventing scroll here keeps buttons visible */
+            gap: 10px;
+            -webkit-overflow-scrolling: touch;
         }
         .room-tile { 
             background: var(--tile); 
-            border-radius: 28px; 
-            width: 100%;
-            height: 100%;
+            border-radius: 20px; 
+            width: 100%; 
+            min-height: 120px; /* Minimum size to ensure visibility */
             display: flex; 
             align-items: center; 
-            justify-content: center;
-            border: 1px solid rgba(255,255,255,0.05);
-            max-height: calc(100% / var(--room-count, 1) - 10px);
+            justify-content: center; 
+            flex-shrink: 0;
         }
-        /* Massive Font Size for Visibility - dynamic based on count */
-        .room-number { font-weight: 900; line-height: 1; letter-spacing: -6px; }
+        .room-num { font-weight: 900; line-height: 1; letter-spacing: -4px; font-size: 80px; }
 
-        /* THE INTERACTION BAR - 3 TILES FIXED AT BOTTOM */
-        #control-bar-fixed { display: flex; gap: 12px; height: 100px; margin-top: auto; }
-        .control-tile { background: var(--tile); border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        /* BOTTOM: FIXED INTERACTION BAR (Elevated for Safari) */
+        #bottom-controls { 
+            height: 110px; 
+            padding: 10px 10px 25px 10px; /* Extra bottom padding for Safari tabs */
+            background: var(--bg);
+            display: grid; 
+            grid-template-columns: 1fr 1fr 1fr; 
+            gap: 10px; 
+            flex-shrink: 0;
+            border-top: 1px solid #222;
+        }
+        .control-btn { 
+            background: var(--tile); 
+            border-radius: 18px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            border: none; 
+            color: #000;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
         
-        .timer-val { font-family: monospace; font-size: 26px; font-weight: bold; color: var(--accent-amber); }
-        .bottom-action-btn { flex: 1; border: none; border-radius: 24px; font-size: 18px; font-weight: 800; color: #000; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        #timer-box { color: var(--accent-amber); font-weight: bold; }
+        #timer-clock { font-family: monospace; font-size: 20px; }
 
-        /* THE SETTINGS - BIGGER FOR EASY TOUCH */
-        #settings-panel { 
-            position: absolute; inset: 15px; background: rgba(28, 28, 30, 0.98); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); 
-            border-radius: 30px; padding: 25px; z-index: 100; display: none; border: 1px solid rgba(255,255,255,0.1); overflow-y: auto; 
+        /* SETTINGS */
+        #settings-ui { 
+            position: absolute; inset: 0; background: rgba(0,0,0,0.98); z-index: 100; display: none; padding: 40px 20px; 
+            overflow-y: auto;
         }
-        #settings-panel.open { display: block; }
-        .setting-group { display: flex; align-items: center; margin-bottom: 25px; gap: 20px; }
-        .setting-group label { flex: 0 0 110px; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
-        .setting-group input { flex: 1; height: 40px; } /* Large touch area */
+        .s-row { margin-bottom: 25px; }
+        .s-row label { display: block; font-size: 11px; font-weight: 800; color: #8e8e93; margin-bottom: 10px; }
+        input[type=range] { width: 100%; height: 45px; }
 
-        input[type=range] { -webkit-appearance: none; background: #3a3a3c; height: 8px; border-radius: 4px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; background: #fff; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-
-        #menu-btn { position: absolute; top: 25px; right: 25px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px 18px; border-radius: 15px; z-index: 101; font-weight: bold; cursor: pointer; }
-        #audio-mute-btn.pulsing { animation: mutePulse 1s infinite; background: var(--accent-red) !important; color: white !important; }
-        @keyframes mutePulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+        #cfg-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; border: 1px solid #444; padding: 8px 12px; border-radius: 10px; font-size: 11px; font-weight: bold; z-index: 10; }
     </style>
 </head>
 <body>
 
-    <div id="video-container">
-        <div id="video-card">
+    <div id="cam-area">
+        <div id="cam-card">
             <video id="video" autoplay playsinline></video>
             <div id="scan-box"></div>
-            <button id="menu-btn" onclick="toggleSettings()">⚙️ SETTINGS</button>
-            
-            <div id="settings-panel">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-                    <span style="font-weight: bold; font-size: 18px; color: var(--accent-green);">Calibration</span>
-                    <button onclick="toggleSettings()" style="background:none; border:none; color:var(--accent-red); font-weight:bold; cursor:pointer; font-size:16px;">CLOSE</button>
-                </div>
-                
-                <div class="setting-group"><label>SCAN WIDTH</label><input type="range" id="boxW" min="50" max="800" value="350"></div>
-                <div class="setting-group"><label>SCAN HEIGHT</label><input type="range" id="boxH" min="20" max="400" value="70"></div>
-                <div class="setting-group"><label>HORIZONTAL</label><input type="range" id="boxX" min="-50" max="50" value="0"></div>
-                <div class="setting-group"><label>VERTICAL</label><input type="range" id="boxY" min="-50" max="50" value="0"></div>
-                <div class="setting-group"><label>THRESH</label><input type="range" id="thresh" min="50" max="220" value="130"></div>
-                <div class="setting-group"><label>REPEAT ALERT: <span id="repValDisplay" style="color: var(--accent-amber)">2m</span></label><input type="range" id="repSlider" min="1" max="15" value="2"></div>
-                <div class="setting-group"><label>VOLUME</label><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
-            </div>
+            <button id="cfg-btn" onclick="openCfg()">SETTINGS</button>
         </div>
     </div>
 
-    <div id="dashboard-fixed">
-        <div id="room-container">
-            <div class="room-tile" style="aspect-ratio: auto; height: 100%; border: 1px dashed #333;"><div class="room-number" style="color:#222; font-size: 80px;">--</div></div>
-        </div>
+    <div id="room-list-container">
+        <div class="room-tile"><div class="room-num" style="color:#222;">--</div></div>
+    </div>
 
-        <div id="control-bar-fixed">
-            <div class="control-tile" style="flex: 1.2;">
-                <span style="font-size: 10px; font-weight: 800; color: var(--accent-amber); margin-bottom: 4px;">REPEAT IN</span>
-                <div class="timer-val" id="timer-display">--:--</div>
-            </div>
-            <button id="startBtn" class="bottom-action-btn" style="background: var(--accent-green); flex: 2;">START SYSTEM</button>
-            <button id="audio-mute-btn" class="bottom-action-btn" style="background: var(--tile); color: white; border: 1px solid #333; flex: 1.5;" onclick="toggleAudioMute()">
-                <span style="font-size: 20px;">🔇</span> MUTE
-            </button>
+    <div id="bottom-controls">
+        <div class="control-btn" id="timer-box">
+            <span style="font-size: 9px; opacity: 0.8;">REMAINING</span>
+            <div id="timer-clock">00:00</div>
         </div>
+        <button id="mainBtn" class="control-btn" style="background: var(--accent-green);" onclick="togglePower()">START</button>
+        <button id="muteBtn" class="control-btn" style="background: var(--accent-purple); color: white;" onclick="toggleMute()">MUTE</button>
+    </div>
+
+    <div id="settings-ui">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
+            <h3 style="margin:0; color:var(--accent-green);">CONFIGURATION</h3>
+            <button onclick="closeCfg()" style="background:var(--accent-red); color:white; border:none; padding:12px 20px; border-radius:12px; font-weight:bold;">SAVE & CLOSE</button>
+        </div>
+        <div class="s-row"><label>SENSITIVITY (THRESHOLD)</label><input type="range" id="threshold" min="50" max="220" value="140"></div>
+        <div class="s-row"><label>REPEAT MINUTES: <span id="repLabel" style="color:white">2</span></label><input type="range" id="repeat" min="1" max="15" value="2"></div>
+        <div class="s-row"><label>SCAN BOX WIDTH</label><input type="range" id="boxW" min="100" max="800" value="380"></div>
+        <div class="s-row"><label>SCAN BOX HEIGHT</label><input type="range" id="boxH" min="30" max="300" value="90"></div>
+        <div class="s-row"><label>VERTICAL ALIGN</label><input type="range" id="boxY" min="-50" max="50" value="0"></div>
     </div>
 
     <script>
         const video = document.getElementById('video');
-        const startBtn = document.getElementById('startBtn');
-        const muteBtn = document.getElementById('audio-mute-btn');
-        const roomContainer = document.getElementById('room-container');
-        const timerDisplay = document.getElementById('timer-display');
+        const roomContainer = document.getElementById('room-list-container');
+        const timerClock = document.getElementById('timer-clock');
         const scanBox = document.getElementById('scan-box');
-        const volInput = document.getElementById('vol');
+        const mainBtn = document.getElementById('mainBtn');
+        const muteBtn = document.getElementById('muteBtn');
         
         let synth = window.speechSynthesis;
-        let activeRooms = []; let lastSet = ""; let timeLeft = 0;
+        let samVoice = null;
+        let activeRooms = []; let lastRooms = ""; let countdown = 0;
         let isRunning = false; let isMuted = false;
-        let scanInterval, tickInterval;
+        let scanTimer, clockTimer;
 
-        function toggleSettings() { document.getElementById('settings-panel').classList.toggle('open'); }
-        function toggleAudioMute() { isMuted = !isMuted; muteBtn.classList.toggle('pulsing', isMuted); if(isMuted) synth.cancel(); }
+        function openCfg() { document.getElementById('settings-ui').style.display = 'block'; }
+        function closeCfg() { document.getElementById('settings-ui').style.display = 'none'; }
 
-        const updateBox = () => {
-            const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value;
-            const x = document.getElementById('boxX').value, y = document.getElementById('boxY').value;
-            scanBox.style.width = w + 'px';
-            scanBox.style.height = h + 'px';
-            scanBox.style.left = `calc(50% + ${x}% - ${w/2}px)`;
+        function findSamantha() {
+            const voices = synth.getVoices();
+            samVoice = voices.find(v => v.name.includes("Samantha")) || voices.find(v => v.lang.includes("en-US")) || voices[0];
+        }
+        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = findSamantha;
+
+        function updateSettings() {
+            const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value, y = document.getElementById('boxY').value;
+            scanBox.style.width = w + 'px'; scanBox.style.height = h + 'px';
+            scanBox.style.left = `calc(50% - ${w/2}px)`;
             scanBox.style.top = `calc(50% + ${y}% - ${h/2}px)`;
-            document.getElementById('repValDisplay').innerText = document.getElementById('repSlider').value + 'm';
-        };
-        document.querySelectorAll('input').forEach(i => i.oninput = updateBox);
-        updateBox();
+            document.getElementById('repLabel').innerText = document.getElementById('repeat').value;
+        }
+        document.querySelectorAll('input').forEach(i => i.oninput = updateSettings);
+        updateSettings();
 
-        startBtn.onclick = async () => {
+        async function togglePower() {
             if (isRunning) { location.reload(); return; }
-            const v = new SpeechSynthesisUtterance(""); synth.speak(v); // Mobile audio unlock
             try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
-                video.srcObject = s;
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280, height: 720 } });
+                video.srcObject = stream;
                 isRunning = true;
-                startBtn.innerText = "STOP";
-                startBtn.style.background = "var(--accent-red)";
-                startScanning();
-                tickInterval = setInterval(tick, 1000);
-            } catch (e) { alert("Camera access required."); }
-        };
+                mainBtn.innerText = "STOP";
+                mainBtn.style.background = "var(--accent-red)";
+                startEngine();
+                clockTimer = setInterval(tick, 1000);
+                synth.speak(new SpeechSynthesisUtterance("")); // Unlock iOS Audio
+            } catch (e) { alert("Enable camera in settings."); }
+        }
 
-        async function startScanning() {
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteBtn.innerText = isMuted ? "UNMUTE" : "MUTE";
+            muteBtn.style.background = isMuted ? "var(--accent-red)" : "var(--accent-purple)";
+            if (isMuted) synth.cancel();
+        }
+
+        async function startEngine() {
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            scanInterval = setInterval(async () => {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            
+            scanTimer = setInterval(async () => {
                 if (!isRunning || !video.videoWidth) return;
-                
-                const sX = video.videoWidth / video.offsetWidth;
-                const sY = video.videoHeight / video.offsetHeight;
-                const w = document.getElementById('boxW').value * sX;
-                const h = document.getElementById('boxH').value * sY;
-                const x = (video.videoWidth/2) + ((document.getElementById('boxX').value/100)*video.videoWidth) - (w/2);
+
+                const sx = video.videoWidth / video.offsetWidth;
+                const sy = video.videoHeight / video.offsetHeight;
+                const w = document.getElementById('boxW').value * sx;
+                const h = document.getElementById('boxH').value * sy;
+                const x = (video.videoWidth/2) - (w/2);
                 const y = (video.videoHeight/2) + ((document.getElementById('boxY').value/100)*video.videoHeight) - (h/2);
 
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
 
                 let imgData = ctx.getImageData(0,0,w,h);
-                let d = imgData.data; let th = document.getElementById('thresh').value;
+                let d = imgData.data; let th = document.getElementById('threshold').value;
                 for (let i=0; i<d.length; i+=4) {
                     let avg = (d[i]+d[i+1]+d[i+2])/3;
                     d[i] = d[i+1] = d[i+2] = avg > th ? 255 : 0;
@@ -185,67 +212,45 @@
                 ctx.putImageData(imgData, 0, 0);
 
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                const matches = text.match(/\d{4,5}/g) || [];
-                const filtered = matches.map(n => n.substring(2,4)).filter((v,i,a) => a.indexOf(v)===i && parseInt(v)>0).sort();
+                const detected = (text.match(/\d{4}/g) || []).map(n => n.slice(2)).filter((v,i,a) => a.indexOf(v)===i).sort();
 
-                if (filtered.length > 0) {
-                    activeRooms = filtered;
-                    updateUI();
-                    if (activeRooms.join(",") !== lastSet) {
-                        lastSet = activeRooms.join(",");
+                if (detected.length > 0) {
+                    activeRooms = detected;
+                    renderRooms();
+                    if (activeRooms.join(",") !== lastRooms) {
+                        lastRooms = activeRooms.join(",");
                         announce();
-                        timeLeft = document.getElementById('repSlider').value * 60;
+                        countdown = document.getElementById('repeat').value * 60;
                     }
                 } else {
                     activeRooms = [];
-                    roomContainer.style.setProperty('--room-count', 1);
-                    roomContainer.innerHTML = `<div class="room-tile" style="border: 1px dashed #333;"><div class="room-number" style="color:#222; font-size: 80px;">--</div></div>`;
+                    roomContainer.innerHTML = `<div class="room-tile"><div class="room-num" style="color:#222;">--</div></div>`;
                 }
-            }, 2000);
+            }, 2500);
         }
 
-        function updateUI() {
-            const count = activeRooms.length;
-            roomContainer.style.setProperty('--room-count', count);
-            // Dynamic massive numbers based on room count
-            const fs = count === 1 ? '22vh' : count === 2 ? '17vh' : '12vh';
-            
-            roomContainer.innerHTML = activeRooms.map(r => `
-                <div class="room-tile">
-                    <div class="room-number" style="font-size: ${fs}">${r}</div>
-                </div>
-            `).join('');
+        function renderRooms() {
+            roomContainer.innerHTML = activeRooms.map(r => `<div class="room-tile"><div class="room-num">${r}</div></div>`).join('');
         }
 
         function announce() {
             if (activeRooms.length === 0 || isMuted) return;
             synth.cancel();
-            
-            setTimeout(() => {
-                let msgText = (activeRooms.length > 1 ? "Rooms " : "Room ") + activeRooms.join(" and ");
-                const ut = new SpeechSynthesisUtterance(msgText);
-                
-                const voices = synth.getVoices();
-                // FIX: Force Samantha, Alexandar (good ios voices) or fallback
-                const preferredVoice = voices.find(v => v.name.includes("Samantha")) || 
-                                       voices.find(v => v.name.includes("Alex")) || 
-                                       voices.find(v => v.lang === "en-US") || voices[0];
-                
-                if(preferredVoice) ut.voice = preferredVoice;
-                ut.volume = parseFloat(volInput.value);
-                ut.rate = 0.85; // Slightly slower
-                synth.speak(ut);
-            }, 100);
+            const text = (activeRooms.length > 1 ? "Rooms " : "Room ") + activeRooms.join(" and ");
+            const speech = new SpeechSynthesisUtterance(text);
+            if (samVoice) speech.voice = samVoice;
+            speech.rate = 0.85;
+            synth.speak(speech);
         }
 
         function tick() {
             if (activeRooms.length > 0) {
-                if (timeLeft <= 0) { announce(); timeLeft = document.getElementById('repSlider').value * 60; }
+                if (countdown <= 0) { announce(); countdown = document.getElementById('repeat').value * 60; }
                 else { 
-                    timeLeft--; 
-                    timerDisplay.innerText = Math.floor(timeLeft/60).toString().padStart(2,'0') + ":" + (timeLeft%60).toString().padStart(2,'0');
+                    countdown--; 
+                    timerClock.innerText = Math.floor(countdown/60).toString().padStart(2,'0') + ":" + (countdown%60).toString().padStart(2,'0');
                 }
-            } else { timerDisplay.innerText = "WAITING"; }
+            } else { timerClock.innerText = "00:00"; }
         }
     </script>
 </body>
