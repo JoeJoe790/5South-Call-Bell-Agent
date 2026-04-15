@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>Smart Call Bell - Fixed Landscape</title>
+    <title>Smart Call Bell - Pro Calibration</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
@@ -14,111 +14,57 @@
             --accent-amber: #ff9f0a; 
             --text-main: #ffffff;
             --text-dim: #8e8e93;
-            --settings-bg: rgba(0, 0, 0, 0.75);
+            --glass-bg: rgba(0, 0, 0, 0.75);
         }
 
-        body.light-mode {
-            --bg: #f2f2f7;
-            --tile: #ffffff;
-            --text-main: #000000;
-            --text-dim: #3a3a3c;
-            --settings-bg: rgba(255, 255, 255, 0.75);
-        }
-        
         body { 
             margin: 0; background: var(--bg); color: var(--text-main); 
             font-family: -apple-system, system-ui, sans-serif; 
-            overflow: hidden; 
-            height: 100dvh; /* Critical: Dynamic height for Safari */
-            display: flex;
+            overflow: hidden; height: 100dvh; display: flex;
         }
 
-        #main-wrapper { 
-            display: flex; 
-            flex-direction: column; 
-            width: 100%; 
-            height: 100%; 
-        }
-
-        /* PORTRAIT DEFAULTS */
+        #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; }
         #cam-area { height: 40dvh; padding: 10px; box-sizing: border-box; flex-shrink: 0; }
         #room-area { height: 50dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
+        
         #bottom-controls { 
-            height: 10dvh; 
-            display: grid; 
-            grid-template-columns: 1fr 1.2fr 1fr; 
-            gap: 8px; 
-            padding: 5px 10px calc(5px + env(safe-area-inset-bottom)); /* Safari Protection */
+            height: 10dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; 
+            padding: 5px 10px calc(5px + env(safe-area-inset-bottom)); 
             border-top: 1px solid #44444433; 
         }
 
-        /* LANDSCAPE FIX: 40/60 SIDE-BY-SIDE */
         @media (orientation: landscape) {
             #main-wrapper { flex-direction: row; }
             #cam-area { width: 40vw; height: 100dvh; border-right: 1px solid #44444433; padding: 15px; }
-            #right-pane { 
-                width: 60vw; 
-                height: 100dvh; 
-                display: flex; 
-                flex-direction: column; 
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-            #room-area { height: 85%; } /* Maximize space for numbers */
-            #bottom-controls { height: 15%; padding: 5px 15px; }
+            #right-pane { width: 60vw; height: 100dvh; display: flex; flex-direction: column; }
+            #room-area { height: 85%; }
+            #bottom-controls { height: 15%; }
         }
 
         #cam-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; background: #111; }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 6px; pointer-events: none; z-index: 5; }
 
-        .room-num { 
-            font-weight: 900; 
-            line-height: 0.8; 
-            letter-spacing: -10px; 
-            text-align: center; 
-            width: 100%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: font-size 0.2s;
-        }
+        .room-num { font-weight: 900; line-height: 0.8; letter-spacing: -10px; text-align: center; width: 100%; display: flex; align-items: center; justify-content: center; }
+        .control-tile { background: var(--tile); border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; }
 
-        .control-tile { 
-            background: var(--tile); 
-            border-radius: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            border: none; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-            font-size: 11px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .amber-text { color: var(--accent-amber); }
-
-        /* TRANSPARENT SETTINGS */
+        /* TRANSPARENT PRO SETTINGS */
         #settings-ui { 
             position: absolute; inset: 0; 
-            background: var(--settings-bg); 
+            background: var(--glass-bg); 
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 100; display: none; padding: 40px 20px; overflow-y: auto; 
         }
         #settings-ui.open { display: block; }
-        .s-row { display: flex; align-items: center; margin-bottom: 20px; gap: 12px; }
-        .s-row label { flex: 0 0 120px; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
-        .s-row input[type=range] { flex: 1; accent-color: var(--accent-green); }
-        .s-val { flex: 0 0 50px; text-align: right; font-size: 14px; font-weight: bold; color: var(--accent-amber); }
+        .s-row { display: flex; align-items: center; margin-bottom: 18px; gap: 12px; }
+        .s-row label { flex: 0 0 130px; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
+        .s-row input[type=range] { flex: 1; accent-color: var(--accent-green); height: 6px; border-radius: 3px; }
+        .s-val { flex: 0 0 45px; text-align: right; font-size: 14px; font-weight: bold; color: var(--accent-amber); }
         
         #cfg-toggle { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 10px; font-size: 10px; z-index: 10; }
         
-        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #3a3a3c; transition: .4s; border-radius: 22px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent-green); }
-        input:checked + .slider:before { transform: translateX(22px); }
+        select, .btn-test { background: #2c2c2e; color: white; border: 1px solid #444; padding: 10px; border-radius: 10px; font-size: 12px; flex: 1; }
+        .btn-test { background: var(--accent-green); color: black; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -131,78 +77,76 @@
             <button id="cfg-toggle" onclick="toggleCfg()">SETTINGS</button>
         </div>
     </div>
-
     <div id="right-pane">
-        <div id="room-area">
-            <div class="room-num" style="color:#333; font-size: 100px;">--</div>
-        </div>
-
+        <div id="room-area"><div class="room-num" style="color:#222; font-size: 100px;">--</div></div>
         <div id="bottom-controls">
-            <div class="control-tile amber-text">
-                <span style="font-size: 8px; opacity: 0.7;">REMAINING</span>
-                <div id="timer-clock">00:00</div>
-            </div>
-            <button id="mainBtn" class="control-tile" style="background: var(--accent-green); color: #000;" onclick="togglePower()">START</button>
-            <button id="muteBtn" class="control-tile amber-text" onclick="toggleMute()">MUTE</button>
+            <div class="control-tile" style="color:var(--accent-amber);"><span style="font-size: 8px; opacity: 0.7;">REMAINING</span><div id="timer-clock">00:00</div></div>
+            <button id="mainBtn" class="control-tile" style="background:var(--accent-green); color:black;" onclick="togglePower()">START</button>
+            <button id="muteBtn" class="control-tile" style="color:var(--accent-amber);" onclick="toggleMute()">MUTE</button>
         </div>
     </div>
 </div>
 
 <div id="settings-ui">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-        <h2 style="color: var(--accent-green); margin:0;">Calibration</h2>
-        <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size: 15px;">CLOSE</button>
+        <h2 style="color: var(--accent-green); margin:0; font-size: 24px;">Calibration</h2>
+        <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size: 16px;">CLOSE</button>
     </div>
 
-    <div class="s-row">
-        <label>Light Mode</label>
-        <label class="switch"><input type="checkbox" id="theme-switch" onchange="toggleTheme()"><span class="slider"></span></label>
-    </div>
-
-    <div class="s-row"><label>Scan Width</label><input type="range" id="boxW" min="100" max="800" value="380"></div>
-    <div class="s-row"><label>Scan Height</label><input type="range" id="boxH" min="30" max="400" value="90"></div>
+    <div class="s-row"><label>Box Width</label><input type="range" id="boxW" min="50" max="1000" value="380"></div>
+    <div class="s-row"><label>Box Height</label><input type="range" id="boxH" min="20" max="500" value="90"></div>
     <div class="s-row"><label>Horizontal</label><input type="range" id="boxX" min="-50" max="50" value="0"></div>
     <div class="s-row"><label>Vertical</label><input type="range" id="boxY" min="-50" max="50" value="0"></div>
     <div class="s-row"><label>Contrast</label><input type="range" id="thresh" min="50" max="220" value="140"></div>
     
     <div class="s-row">
-        <label>Alert Every</label>
+        <label>Repeat Alert</label>
         <input type="range" id="repeat" min="1" max="15" value="2">
         <span class="s-val" id="vR">2m</span>
     </div>
 
     <div class="s-row"><label>Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="0.9"></div>
+    
+    <div class="s-row"><label>Choose Voice</label><select id="voiceSel"></select></div>
+    <div class="s-row"><label></label><button class="btn-test" onclick="testAudio()">Test Audio</button></div>
 </div>
 
 <script>
     const video = document.getElementById('video'), roomArea = document.getElementById('room-area');
     const timerClock = document.getElementById('timer-clock'), scanBox = document.getElementById('scan-box');
-    const mainBtn = document.getElementById('mainBtn'), muteBtn = document.getElementById('muteBtn');
-    let synth = window.speechSynthesis, activeRooms = [], lastSet = "", countdown = 0, isRunning = false, isMuted = false, engine;
+    const mainBtn = document.getElementById('mainBtn'), muteBtn = document.getElementById('muteBtn'), voiceSel = document.getElementById('voiceSel');
+    let synth = window.speechSynthesis, activeRooms = [], lastSet = "", countdown = 0, isRunning = false, isMuted = false, engine, voices = [];
 
     function toggleCfg() { document.getElementById('settings-ui').classList.toggle('open'); }
-    function toggleTheme() { document.body.classList.toggle('light-mode', document.getElementById('theme-switch').checked); }
+    
+    function loadVoices() {
+        voices = synth.getVoices();
+        voiceSel.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
+    }
+    synth.onvoiceschanged = loadVoices; loadVoices();
 
     function updateSettings() {
         const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value;
         const x = document.getElementById('boxX').value, y = document.getElementById('boxY').value;
-        const r = document.getElementById('repeat').value;
         scanBox.style.width = w + 'px'; scanBox.style.height = h + 'px';
         scanBox.style.left = `calc(50% + ${x}% - ${w/2}px)`; 
         scanBox.style.top = `calc(50% + ${y}% - ${h/2}px)`;
-        document.getElementById('vR').innerText = r + 'm';
+        document.getElementById('vR').innerText = document.getElementById('repeat').value + 'm';
     }
-    document.querySelectorAll('input').forEach(i => i.oninput = updateSettings);
-    updateSettings();
+    document.querySelectorAll('input').forEach(i => i.oninput = updateSettings); updateSettings();
+
+    function testAudio() {
+        const msg = new SpeechSynthesisUtterance("Testing room audio alert");
+        msg.voice = voices[voiceSel.value]; msg.volume = document.getElementById('vol').value;
+        synth.speak(msg);
+    }
 
     async function togglePower() {
         if (isRunning) { location.reload(); return; }
         const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
         video.srcObject = s; isRunning = true;
         mainBtn.innerText = "STOP"; mainBtn.style.background = "var(--accent-red)";
-        startEngine();
-        setInterval(tick, 1000);
-        synth.speak(new SpeechSynthesisUtterance(""));
+        startEngine(); setInterval(tick, 1000);
     }
 
     function toggleMute() { isMuted = !isMuted; muteBtn.innerText = isMuted ? "UNMUTE" : "MUTE"; muteBtn.style.color = isMuted ? "var(--accent-red)" : "var(--accent-amber)"; }
@@ -227,21 +171,17 @@
     }
 
     function render() {
-        const count = activeRooms.length;
-        const isLandscape = window.innerWidth > window.innerHeight;
-        // Adjust font size based on orientation to fill 85% of available height
-        const fs = isLandscape 
-            ? (count === 1 ? '55dvh' : '28dvh') 
-            : (count === 1 ? '40dvh' : '20dvh');
+        const count = activeRooms.length, isL = window.innerWidth > window.innerHeight;
+        const fs = isL ? (count === 1 ? '55dvh' : '28dvh') : (count === 1 ? '40dvh' : '20dvh');
         roomArea.innerHTML = activeRooms.map(r => `<div class="room-num" style="font-size: ${fs}">${r}</div>`).join('');
     }
 
     function announce() {
         if (activeRooms.length === 0 || isMuted) return;
         synth.cancel();
-        const speech = new SpeechSynthesisUtterance("Room " + activeRooms.join(" and "));
-        speech.volume = document.getElementById('vol').value;
-        synth.speak(speech);
+        const msg = new SpeechSynthesisUtterance("Room " + activeRooms.join(" and "));
+        msg.voice = voices[voiceSel.value]; msg.volume = document.getElementById('vol').value;
+        synth.speak(msg);
     }
 
     function tick() {
@@ -250,7 +190,6 @@
             else { countdown--; timerClock.innerText = Math.floor(countdown/60).toString().padStart(2,'0') + ":" + (countdown%60).toString().padStart(2,'0'); }
         } else { timerClock.innerText = "00:00"; }
     }
-    
     window.addEventListener('resize', render);
 </script>
 </body>
