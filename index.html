@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>Smart Call Bell - Pro v3</title>
+    <title>Smart Call Bell - Fixed Floating v4</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
@@ -24,6 +24,8 @@
         }
 
         #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
+        
+        /* Camera Area (Top 40%) */
         #cam-area { height: 40dvh; padding: 10px; box-sizing: border-box; flex-shrink: 0; z-index: 10; }
         #cam-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; background: #111; border: 1px solid #333; }
         #video { width: 100%; height: 100%; object-fit: cover; }
@@ -33,7 +35,7 @@
         #room-area { 
             height: 50dvh; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; 
-            overflow: hidden; z-index: 5; gap: 20px; /* Added space between stacked numbers */
+            overflow: hidden; z-index: 5; gap: 30px; 
         }
         
         #bottom-controls { 
@@ -53,29 +55,42 @@
             #main-wrapper { flex-direction: row; }
             #cam-area { width: 40vw; height: 100dvh; border-right: 1px solid #44444433; padding: 15px; }
             #right-pane { width: 60vw; height: 100dvh; display: flex; flex-direction: column; }
-            #room-area { height: 85%; gap: 30px; } /* Increased gap for landscape */
+            #room-area { height: 85%; }
             #bottom-controls { height: 15%; padding-bottom: env(safe-area-inset-bottom); }
         }
 
         .room-num { font-weight: 900; line-height: 0.8; letter-spacing: -10px; text-align: center; }
 
-        /* SETTINGS UI */
+        /* FIXED FLOATING SETTINGS: Explicitly 70% height and centered */
         #settings-ui { 
-            position: absolute; top: 15dvh; left: 5%; width: 90%; height: 70dvh; 
-            background: var(--settings-card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border-radius: 24px; z-index: 100; display: none; padding: 25px 20px; overflow-y: auto; box-sizing: border-box; border: 1px solid #444;
+            position: fixed; /* Changed to fixed for true floating */
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%); /* Centers the card */
+            width: 90%; 
+            height: 70dvh; /* Limits height so background stays visible */
+            background: var(--settings-card-bg); 
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border-radius: 28px; 
+            z-index: 1000; 
+            display: none; 
+            padding: 30px 20px; 
+            overflow-y: auto; 
+            box-sizing: border-box; 
+            border: 1px solid #555;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
         }
         #settings-ui.open { display: block; }
-        .s-row { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
+        
+        .s-row { display: flex; align-items: center; margin-bottom: 22px; gap: 15px; }
         .s-row label { flex: 0 0 130px; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
         
-        /* Adjusters */
+        /* Adjusters - Screenshot Matched */
         .s-row input[type=range] { flex: 1; height: 10px; -webkit-appearance: none; background: #2c2c2e; border-radius: 5px; outline: none; }
-        .s-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: white; cursor: pointer; }
+        .s-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: white; cursor: pointer; border: none; }
         .s-val { flex: 0 0 45px; text-align: right; font-size: 14px; font-weight: bold; color: var(--accent-amber); }
         
         select, .btn-test { background: #2c2c2e; color: white; border: 1px solid #444; padding: 12px; border-radius: 12px; font-size: 14px; flex: 1; outline: none; }
-        .btn-test { background: var(--accent-green); color: black; font-weight: bold; text-transform: uppercase; cursor: pointer; border: none; }
+        .btn-test { background: var(--accent-green); color: black; font-weight: bold; text-transform: uppercase; cursor: pointer; border: none; margin-top: 10px;}
         #cfg-toggle { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 10px; font-size: 10px; z-index: 30; }
     </style>
 </head>
@@ -102,7 +117,7 @@
 
 <div id="settings-ui">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
-        <h2 style="color:var(--accent-green); margin:0;">Calibration</h2>
+        <h2 style="color:var(--accent-green); margin:0; font-size: 24px;">Calibration</h2>
         <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size:16px;">CLOSE</button>
     </div>
     <div class="s-row"><label>Box Width</label><input type="range" id="boxW" min="50" max="1000" value="380"></div>
@@ -112,6 +127,7 @@
     <div class="s-row"><label>Contrast</label><input type="range" id="thresh" min="50" max="220" value="140"></div>
     <div class="s-row"><label>Repeat Alert</label><input type="range" id="repeat" min="1" max="15" value="2"><span class="s-val" id="vR">2m</span></div>
     <div class="s-row"><label>Volume</label><input type="range" id="vol" min="0" max="1" step="0.1" value="0.9"></div>
+    
     <div class="s-row"><label>Choose Voice</label><select id="voiceSel"></select></div>
     <div class="s-row"><label></label><button class="btn-test" onclick="testAudio()">Test Audio</button></div>
 </div>
@@ -150,7 +166,7 @@
                 startEngine(); setInterval(tick, 1000);
             } catch (e) { alert("Camera access denied"); }
         } else {
-            // FIXED STOP FUNCTIONALITY
+            // STOP functionality fixed
             isRunning = false;
             clearInterval(engine);
             if (stream) stream.getTracks().forEach(track => track.stop());
@@ -183,8 +199,8 @@
 
     function render() {
         const count = activeRooms.length, isL = window.innerWidth > window.innerHeight;
-        // SIGNIFICANTLY BIGGER FONT SIZES
-        const fs = isL ? (count === 1 ? '65dvh' : '35dvh') : (count === 1 ? '45dvh' : '22dvh');
+        // Large landscape numbers utilizing 85% of height
+        const fs = isL ? (count === 1 ? '68dvh' : '38dvh') : (count === 1 ? '45dvh' : '22dvh');
         roomArea.innerHTML = activeRooms.map(r => `<div class="room-num" style="font-size: ${fs}">${r}</div>`).join('');
     }
 
