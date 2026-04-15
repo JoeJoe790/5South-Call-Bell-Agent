@@ -3,97 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Nurse Monitor Pro - Ascom Edition</title>
+    <title>Smart Call Bell - iOS Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root { --accent: #28cd41; --danger: #ff3b30; --warning: #ffcc00; }
-        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        :root { 
+            --bg: #000000; /* iOS True Black */
+            --tile: #1c1c1e; /* iOS Dark Card */
+            --accent-red: #ff453a; /* iOS Vibrant Red */
+            --accent-green: #30d158; /* iOS Vibrant Green */
+            --accent-amber: #ff9f0a; /* iOS Vibrant Amber */
+            --text-main: #ffffff;
+            --text-dim: #8e8e93;
+        }
         
-        /* LANDSCAPE: Split View (Camera Left, Numbers Right) */
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Layout logic based on your landscape/portrait requirements */
         @media (orientation: landscape) {
             body { flex-direction: row; }
-            #video-container { flex: 1.2; height: 100vh; border-right: 2px solid #333; }
-            #dashboard { flex: 0.8; height: 100vh; padding: 10px; justify-content: flex-start; }
-            #room-display { display: flex; flex-direction: column; gap: 5px; font-size: 10vw !important; padding-top: 20px; }
+            #video-container { flex: 1.4; height: 100vh; padding: 10px; box-sizing: border-box; }
+            #video-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; }
+            #dashboard { flex: 0.6; height: 100vh; padding: 10px 10px 10px 0; overflow-y: auto; justify-content: flex-start; }
+            .room-number { font-size: 10vw !important; }
+            #interaction-bar { flex-direction: column; }
         }
 
-        /* PORTRAIT: Stacked View */
         @media (orientation: portrait) {
-            #video-container { flex: 1; width: 100vw; }
-            #dashboard { flex: 1; border-top: 2px solid #333; padding: 20px; }
-            #room-display { font-size: 10rem; }
+            #video-container { flex: 1; width: 100vw; padding: 10px; box-sizing: border-box; }
+            #video-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; }
+            #dashboard { flex: 1; padding: 0 10px 10px 10px; }
+            .room-number { font-size: 20vw !important; }
+            #interaction-bar { flex-direction: row; }
         }
 
-        #video-container { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* Camera & Scan UI */
+        #video-container { display: flex; align-items: center; justify-content: center; }
         #video { width: 100%; height: 100%; object-fit: cover; }
-        #scan-box { position: absolute; border: 3px solid var(--danger); border-radius: 4px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,59,48,0.6); }
+        #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 12px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,69,58,0.3); }
+        #scan-box::after { content: '●'; color: var(--accent-red); position: absolute; top: -10px; right: -5px; font-size: 20px; }
 
-        #dashboard { background: #000; display: flex; flex-direction: column; align-items: center; position: relative; }
-        #room-display { font-weight: 900; color: var(--accent); text-align: center; width: 100%; line-height: 0.9; }
-        #timer-display { font-size: 0.9rem; color: var(--warning); margin-top: auto; padding-bottom: 30px; font-weight: bold; font-family: monospace; }
-        #status-light { font-size: 0.6rem; color: #444; position: absolute; bottom: 5px; right: 10px; text-transform: uppercase; }
+        /* Dashboard & Cards */
+        #dashboard { display: flex; flex-direction: column; position: relative; gap: 10px; }
+        .tile { background: var(--tile); border-radius: 20px; padding: 15px; display: flex; flex-direction: column; justify-content: center; }
+        .label { font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+        
+        #room-list-container { flex-grow: 1; display: flex; flex-wrap: wrap; gap: 10px; align-content: flex-start; overflow-y: auto; }
+        .room-tile { flex: 1 1 calc(50% - 5px); min-width: calc(50% - 5px); aspect-ratio: 1; }
+        .room-number { font-weight: 900; color: var(--text-main); text-align: center; line-height: 1; letter-spacing: -2px; }
+        
+        #interaction-bar { display: flex; gap: 10px; }
+        #timer-tile { flex: 1; color: var(--accent-amber); align-items: center; text-align: center; font-family: monospace; font-size: 16px; font-weight: bold; }
+        
+        #startBtn { flex: 1; border: none; padding: 15px; border-radius: 20px; font-size: 16px; font-weight: bold; cursor: pointer; color: #000; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .power-icon { font-size: 20px; }
 
-        #settings-menu { position: fixed; right: -320px; top: 0; width: 280px; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; transition: 0.3s; padding: 20px; border-left: 1px solid #444; overflow-y: auto; }
-        #settings-menu.open { right: 0; }
-        .setting-row { margin-bottom: 15px; display: flex; flex-direction: column; }
-        .slider-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-        .label-text { font-size: 0.65rem; color: #00e5ff; font-weight: bold; width: 70px; }
-        input[type=range] { flex: 1; accent-color: var(--accent); }
+        /* Settings Overlay */
+        #settings-panel { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(28, 28, 30, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-radius: 20px; padding: 15px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); display: none; max-height: 80vh; overflow-y: auto; }
+        #settings-panel.open { display: block; }
+        
+        .setting-item { margin-bottom: 12px; }
+        .setting-item label { font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: bold; }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: #3a3a3c; height: 5px; border-radius: 2.5px; outline: none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: #fff; border-radius: 50%; cursor: pointer; border: 1px solid #d1d1d6; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
 
-        #menu-toggle { position: absolute; top: 10px; right: 10px; background: rgba(51,51,51,0.8); color: #fff; border: 1px solid #777; padding: 12px; border-radius: 10px; z-index: 101; cursor: pointer; }
-        #startBtn { background: var(--accent); color: white; border: none; padding: 25px 50px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .close-btn { background: #007aff; width: 100%; padding: 12px; border: none; color: white; border-radius: 8px; margin-top: 10px; font-weight: bold; }
+        #menu-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 15px; border-radius: 12px; z-index: 101; font-weight: bold; font-size: 12px; cursor: pointer; backdrop-filter: blur(5px); }
+        
+        #status-indicator { font-size: 10px; color: var(--text-dim); display: flex; align-items: center; justify-content: center; margin-top: 5px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #444; display: inline-block; margin-right: 5px; transition: 0.2s; }
+        .status-active .status-dot { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
     </style>
 </head>
 <body>
 
     <div id="video-container">
-        <video id="video" autoplay playsinline></video>
-        <div id="scan-box"></div>
-        <div id="menu-toggle">⚙️</div>
+        <div id="video-card">
+            <video id="video" autoplay playsinline></video>
+            <div id="scan-box"></div>
+            <button id="menu-btn" onclick="toggleSettings()">⚙️ SETTINGS</button>
+            
+            <div id="settings-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <span style="font-weight: bold; font-size: 14px;">Calibration</span>
+                    <button onclick="toggleSettings()" style="background:none; border:none; color:var(--accent-red); font-weight:bold;">DONE</button>
+                </div>
+                
+                <div class="setting-item">
+                    <label>SCAN AREA SIZE</label>
+                    <input type="range" id="boxW" min="50" max="800" value="300">
+                    <input type="range" id="boxH" min="20" max="400" value="65" style="margin-top:10px;">
+                </div>
+                
+                <div class="setting-item">
+                    <label>SCAN AREA POSITION</label>
+                    <input type="range" id="boxX" min="-50" max="50" value="0">
+                    <input type="range" id="boxY" min="-50" max="50" value="0" style="margin-top:10px;">
+                </div>
+
+                <div class="setting-item">
+                    <label>IMAGE CONTRAST</label>
+                    <input type="range" id="threshold" min="50" max="220" value="135">
+                </div>
+
+                <div class="setting-item">
+                    <label>ALERT REPEAT: <span id="repLabel" style="color: var(--accent-amber)">2m</span></label>
+                    <input type="range" id="repSlider" min="1" max="15" value="2">
+                </div>
+
+                <div class="setting-item">
+                    <label>VOICE & VOLUME</label>
+                    <select id="voiceSelect" style="width:100%; background:#2c2c2e; color:white; border:none; padding:10px; border-radius:10px; margin-bottom:8px; font-size:12px;"></select>
+                    <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
+                </div>
+                
+                <button id="testBtn" style="width:100%; background:var(--tile); color:white; border:1px solid #3a3a3c; padding:12px; border-radius:12px; font-weight:bold; margin-top:5px;">TEST AUDIO</button>
+            </div>
+        </div>
     </div>
 
     <div id="dashboard">
-        <button id="startBtn">START SYSTEM</button>
-        <div id="room-display"></div>
-        <div id="timer-display"></div>
-        <div id="status-light">Idle</div>
-    </div>
+        <div class="label" style="padding-left: 10px;">Call Detection</div>
+        <div id="room-list-container">
+            <div class="tile room-tile" style="align-items: center; aspect-ratio: auto;">
+                <div class="room-number">--</div>
+            </div>
+        </div>
 
-    <div id="settings-menu">
-        <h3 style="margin-top:0; color:var(--accent);">Calibration</h3>
-        <div class="setting-row">
-            <div class="slider-group"><span class="label-text">Box Width</span><input type="range" id="boxW" min="50" max="800" value="300"></div>
-            <div class="slider-group"><span class="label-text">Box Height</span><input type="range" id="boxH" min="20" max="400" value="60"></div>
+        <div id="interaction-bar">
+            <div id="timer-tile" class="tile">
+                <div class="label" style="color: var(--accent-amber)">NEXT ALERT</div>
+                <div id="timer-display">--:--</div>
+            </div>
+            <button id="startBtn" style="background: var(--accent-green);">
+                <span class="power-icon">⏻</span> START SYSTEM
+            </button>
         </div>
-        <div class="setting-row">
-            <div class="slider-group"><span class="label-text">X-Pos</span><input type="range" id="boxX" min="-50" max="50" value="0"></div>
-            <div class="slider-group"><span class="label-text">Y-Pos</span><input type="range" id="boxY" min="-50" max="50" value="0"></div>
+
+        <div id="status-indicator">
+            <div class="status-dot"></div> <span id="status-text">SYSTEM STANDBY</span>
         </div>
-        <div class="setting-row">
-            <label style="font-size: 0.7rem; color: var(--warning);">REPEAT ALERT: <span id="repLabel">2m</span></label>
-            <input type="range" id="repSlider" min="1" max="15" value="2">
-        </div>
-        <div class="setting-row">
-            <label style="font-size: 0.7rem;">OCR CONTRAST (Threshold)</label>
-            <input type="range" id="threshold" min="50" max="220" value="135">
-        </div>
-        <div class="setting-row">
-            <label style="font-size: 0.7rem;">VOICE & VOLUME</label>
-            <select id="voiceSelect" style="background:#222; color:white; border:1px solid #777; padding:8px; border-radius:5px; margin-bottom:10px;"></select>
-            <div class="slider-group"><span class="label-text">Volume</span><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
-        </div>
-        <button id="testBtn" style="width:100%; background:transparent; color:white; padding:10px; border:1px solid #555; border-radius:8px;">Test Audio</button>
-        <button class="close-btn" onclick="toggleMenu()">SAVE & CLOSE</button>
     </div>
 
     <script>
         const video = document.getElementById('video');
         const startBtn = document.getElementById('startBtn');
-        const roomDisplay = document.getElementById('room-display');
+        const roomDisplay = document.getElementById('room-list-container');
         const timerDisplay = document.getElementById('timer-display');
-        const statusLight = document.getElementById('status-light');
-        const menu = document.getElementById('settings-menu');
+        const statusText = document.getElementById('status-text');
+        const statusContainer = document.getElementById('status-indicator');
+        const panel = document.getElementById('settings-panel');
         const boxW = document.getElementById('boxW'), boxH = document.getElementById('boxH');
         const boxX = document.getElementById('boxX'), boxY = document.getElementById('boxY');
         const thresholdInput = document.getElementById('threshold');
@@ -101,9 +159,11 @@
         
         let synth = window.speechSynthesis;
         let activeRooms = []; let lastSet = ""; let timeLeft = 0;
+        let isRunning = false;
+        let scanInterval;
+        let tickInterval;
 
-        function toggleMenu() { menu.classList.toggle('open'); }
-        document.getElementById('menu-toggle').onclick = toggleMenu;
+        function toggleSettings() { panel.classList.toggle('open'); }
 
         const updateBox = () => {
             scanBox.style.width = boxW.value + 'px';
@@ -129,31 +189,51 @@
         loadVoices();
 
         startBtn.onclick = async () => {
-            // Unlocking Audio for Mobile
+            if (isRunning) {
+                stopSystem();
+                return;
+            }
+
+            // Primitive Audio Nudge for Mobile
             const v = new SpeechSynthesisUtterance("");
             synth.speak(v);
-
             try {
                 const s = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
                     audio: false 
                 });
                 video.srcObject = s;
-                startBtn.style.display = 'none';
-                statusLight.innerText = "System Active";
+                isRunning = true;
+                startBtn.style.background = 'var(--accent-red)';
+                startBtn.innerHTML = '<span class="power-icon">⏹</span> STOP SYSTEM';
+                statusText.innerText = "MONITORING ACTIVE";
                 startScanning();
-                setInterval(tick, 1000);
+                tickInterval = setInterval(tick, 1000);
             } catch (err) {
-                alert("Camera access denied. Ensure you are on HTTPS.");
+                alert("Camera Error. Please use HTTPS and allow camera access.");
             }
         };
+
+        function stopSystem() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            isRunning = false;
+            clearInterval(scanInterval);
+            clearInterval(tickInterval);
+            startBtn.style.background = 'var(--accent-green)';
+            startBtn.innerHTML = '<span class="power-icon">⏻</span> START SYSTEM';
+            statusText.innerText = "SYSTEM STANDBY";
+            resetDisplay();
+        }
 
         async function startScanning() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             
-            setInterval(async () => {
-                if (!video.videoWidth || video.readyState < 2) return;
+            scanInterval = setInterval(async () => {
+                if (!isRunning || !video.videoWidth || video.readyState < 2) return;
                 
                 const scaleX = video.videoWidth / video.offsetWidth;
                 const scaleY = video.videoHeight / video.offsetHeight;
@@ -165,7 +245,6 @@
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
                 
-                // OCR Pre-Processing
                 let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 let data = imageData.data;
                 let thresh = thresholdInput.value;
@@ -176,9 +255,9 @@
                 }
                 ctx.putImageData(imageData, 0, 0);
 
-                statusLight.style.color = "#00e5ff";
+                statusContainer.classList.add('status-active');
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                statusLight.style.color = "#444";
+                statusContainer.classList.remove('status-active');
 
                 // Logic: Grab digits 3 and 4 of any 4 or 5 digit number
                 const matches = text.match(/\d{4,5}/g) || [];
@@ -196,30 +275,40 @@
                         timeLeft = document.getElementById('repSlider').value * 60; 
                     }
                 } else {
-                    roomDisplay.innerHTML = ""; 
-                    timerDisplay.innerText = ""; 
+                    resetDisplay();
                     lastSet = "";
                     activeRooms = [];
                 }
             }, 1800);
         }
 
+        function resetDisplay() {
+            roomDisplay.innerHTML = `<div class="tile room-tile" style="align-items: center; aspect-ratio: auto;"><div class="room-number">--</div></div>`;
+            timerDisplay.innerText = "--:--";
+        }
+
         function updateDisplay() {
-            if (window.innerHeight < window.innerWidth) {
-                roomDisplay.innerHTML = activeRooms.map(r => `<div>${r}</div>`).join('');
-            } else {
-                roomDisplay.innerHTML = activeRooms.join(" ");
+            if (activeRooms.length === 0) {
+                resetDisplay();
+                return;
             }
+            let html = activeRooms.map(r => `
+                <div class="tile room-tile">
+                    <div class="label">ROOM</div>
+                    <div class="room-number">${r}</div>
+                </div>
+            `).join('');
+            roomDisplay.innerHTML = html;
         }
 
         function announce() {
             if (activeRooms.length === 0) return;
             synth.cancel();
-
             setTimeout(() => {
                 let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
                 const ut = new SpeechSynthesisUtterance(msg);
-                const selectedVoice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+                const voices = synth.getVoices();
+                const selectedVoice = voices.find(v => v.name === document.getElementById('voiceSelect').value);
                 if(selectedVoice) ut.voice = selectedVoice;
                 ut.volume = document.getElementById('vol').value;
                 ut.rate = 0.9;
@@ -228,20 +317,25 @@
         }
 
         function tick() {
+            if (!isRunning) return;
             if (activeRooms.length > 0) {
                 if (timeLeft <= 0) {
                     announce();
                     timeLeft = document.getElementById('repSlider').value * 60;
                 } else {
                     timeLeft--;
-                    timerDisplay.innerText = `NEXT ALERT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+                    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                    const s = (timeLeft % 60).toString().padStart(2, '0');
+                    timerDisplay.innerText = `${m}:${s}`;
                 }
+            } else {
+                timerDisplay.innerText = "WAITING";
             }
         }
 
         document.getElementById('testBtn').onclick = () => {
             synth.cancel();
-            const ut = new SpeechSynthesisUtterance("Audio Working");
+            const ut = new SpeechSynthesisUtterance("Audio check successful");
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
         };
