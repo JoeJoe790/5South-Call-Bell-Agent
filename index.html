@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>Smart Call Bell - iOS Pro v5</title>
+    <title>Smart Call Bell - iOS Pro v6</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
@@ -15,13 +15,13 @@
         
         #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
         
-        /* Layout Fix: Specific heights to prevent overlapping/cropping */
+        /* Camera Area */
         #cam-area { height: 35dvh; padding: 10px; box-sizing: border-box; z-index: 10; }
         #cam-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; border: 1px solid #333; }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 6px; pointer-events: none; z-index: 20; }
         
-        /* iOS Themed Curved Tiles for Numbers */
+        /* iOS Curved Tiles */
         #room-area { 
             height: 53dvh; display: flex; flex-direction: column; 
             justify-content: center; align-items: center; gap: 12px; padding: 10px;
@@ -29,8 +29,8 @@
         .room-tile {
             background: var(--tile);
             width: 95%;
-            height: 45%; /* Dynamically sized to fit 2 rooms perfectly */
-            border-radius: 40px; /* High curvature iOS theme */
+            height: 45%; 
+            border-radius: 40px; 
             display: flex;
             align-items: center;
             justify-content: center;
@@ -41,10 +41,11 @@
         #bottom-controls { height: 12dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #222; }
         .control-tile { background: var(--tile); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; }
         
-        /* Settings UI Remains Untouched as requested */
+        /* Floating Settings Overlay */
         #settings-overlay { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; z-index: 1000; background: rgba(0,0,0,0.4); }
         #settings-overlay.open { display: flex; }
         #settings-card { width: 92%; height: 70dvh; background: rgba(28,28,30,0.95); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border-radius: 35px; border: 1px solid #444; padding: 25px; overflow-y: auto; box-sizing: border-box; }
+        
         .s-row { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
         .s-row label { flex: 0 0 120px; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
         input[type=range] { flex: 1; height: 10px; -webkit-appearance: none; background: #333; border-radius: 5px; }
@@ -108,7 +109,6 @@
 
     function toggleCfg() { document.getElementById('settings-overlay').classList.toggle('open'); }
     
-    // Improved Voice Loader
     function loadVoices() {
         voices = synth.getVoices().filter(v => v.lang.includes('en'));
         voiceSel.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name}</option>`).join('');
@@ -131,15 +131,13 @@
     async function handlePower() {
         if (!isRunning) {
             try {
-                // Audio Resume for Mobile
                 if (synth.paused) synth.resume();
-                testAudio(); // Silent wake-up for voice engine
-                
+                testAudio(); 
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
                 video.srcObject = stream; isRunning = true; 
                 mainBtn.innerText = "STOP"; mainBtn.style.background = "var(--accent-red)";
                 startEngine(); setInterval(tick, 1000);
-            } catch (e) { alert("Camera Error: Please check permissions."); }
+            } catch (e) { alert("Camera access denied."); }
         } else {
             isRunning = false; clearInterval(engine); 
             if (stream) stream.getTracks().forEach(t => t.stop());
@@ -162,7 +160,12 @@
             canvas.width = w; canvas.height = h; ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
             
             const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-            const found = (text.match(/\d{3,5}/g) || []).map(n => n.slice(-2)).filter((v,i,a) => a.indexOf(v)===i).sort();
+            
+            // Logic to handle 3rd and 4th digits specifically
+            const found = (text.match(/\d{4,5}/g) || [])
+                .map(n => n.substring(2, 4)) 
+                .filter((v,i,a) => v.length === 2 && a.indexOf(v)===i)
+                .sort();
             
             if (found.length > 0) {
                 const newSetString = found.join(",");
@@ -182,7 +185,6 @@
 
     function render() {
         const count = activeRooms.length, isL = window.innerWidth > window.innerHeight;
-        // Calculation for font size to ensure it fills the tile without cropping
         const fs = isL ? (count === 1 ? '55dvh' : '30dvh') : (count === 1 ? '35dvh' : '22dvh');
         roomArea.innerHTML = activeRooms.map(r => `
             <div class="room-tile">
@@ -201,9 +203,9 @@
     }
 
     function testAudio() { 
-        const msg = new SpeechSynthesisUtterance("Voice active");
+        const msg = new SpeechSynthesisUtterance("Voice engine active");
         if(voices.length > 0) msg.voice = voices[voiceSel.value];
-        msg.volume = 0.1; // Low volume for test
+        msg.volume = 0.1;
         synth.speak(msg); 
     }
 
