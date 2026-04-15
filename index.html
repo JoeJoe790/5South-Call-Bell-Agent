@@ -7,46 +7,51 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
-            --bg: #000000; --tile: #1c1c1e; --tile-text: #ffffff;
-            --accent-red: #ff453a; --accent-green: #30d158; --accent-amber: #ff9f0a; 
-            --text-main: #ffffff; --text-dim: #8e8e93; --ui-border: #333;
+            --bg: #000000; --tile: #1c1c1e; --accent-red: #ff453a; 
+            --accent-green: #30d158; --accent-amber: #ff9f0a; 
+            --text-main: #ffffff; --text-dim: #8e8e93;
         }
-        
-        /* Light Mode Styles */
-        body.light-mode {
-            --bg: #f2f2f7; --tile: #ffffff; --tile-text: #1c1c1e;
-            --text-main: #1c1c1e; --text-dim: #3a3a3c; --ui-border: #d1d1d6;
-        }
-
-        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; transition: background 0.3s; }
+        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, sans-serif; overflow: hidden; height: 100dvh; display: flex; flex-direction: column; }
         
         #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
         
+        /* Camera Area */
         #cam-area { height: 35dvh; padding: 10px; box-sizing: border-box; z-index: 10; }
-        #cam-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; border: 1px solid var(--ui-border); }
+        #cam-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; border: 1px solid #333; }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 6px; pointer-events: none; z-index: 20; }
         
-        #room-area { height: 53dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 10px; }
-        .room-tile { background: var(--tile); width: 95%; height: 45%; border-radius: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: background 0.3s; }
-        .room-num { font-weight: 900; line-height: 1; letter-spacing: -5px; color: var(--tile-text); margin: 0; }
+        /* iOS Curved Tiles */
+        #room-area { 
+            height: 53dvh; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; gap: 12px; padding: 10px;
+        }
+        .room-tile {
+            background: var(--tile);
+            width: 95%;
+            height: 45%; 
+            border-radius: 40px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .room-num { font-weight: 900; line-height: 1; letter-spacing: -5px; color: white; margin: 0; }
 
-        #bottom-controls { height: 12dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--ui-border); }
-        .control-tile { background: var(--tile); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; color: var(--text-main); }
+        #bottom-controls { height: 12dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #222; }
+        .control-tile { background: var(--tile); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; }
         
+        /* Floating Settings Overlay */
         #settings-overlay { position: fixed; inset: 0; display: none; justify-content: center; align-items: center; z-index: 1000; background: rgba(0,0,0,0.4); }
         #settings-overlay.open { display: flex; }
-        #settings-card { width: 92%; height: 75dvh; background: var(--tile); border-radius: 35px; border: 1px solid var(--ui-border); padding: 25px; overflow-y: auto; box-sizing: border-box; }
+        #settings-card { width: 92%; height: 70dvh; background: rgba(28,28,30,0.95); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border-radius: 35px; border: 1px solid #444; padding: 25px; overflow-y: auto; box-sizing: border-box; }
         
         .s-row { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
         .s-row label { flex: 0 0 120px; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
-        input[type=range] { flex: 1; height: 10px; -webkit-appearance: none; background: #444; border-radius: 5px; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-amber); border: none; }
-        
-        select, .btn-action { background: #333; color: white; border: 1px solid #444; padding: 12px; border-radius: 14px; flex: 1; font-weight: bold; }
-        .btn-theme { background: var(--accent-amber); color: black; border: none; width: 100%; padding: 14px; border-radius: 16px; font-weight: 800; margin-bottom: 15px; }
-        .btn-test { background: var(--accent-green); color: black; border: none; width: 100%; padding: 14px; border-radius: 16px; font-weight: 800; }
-        
+        input[type=range] { flex: 1; height: 10px; -webkit-appearance: none; background: #333; border-radius: 5px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: white; border: none; }
+        select, .btn-test { background: #333; color: white; border: 1px solid #444; padding: 12px; border-radius: 14px; flex: 1; font-weight: bold; }
+        .btn-test { background: var(--accent-green); color: black; border: none; margin-top: 10px; }
         #cfg-toggle { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); color: white; border: none; padding: 8px 14px; border-radius: 12px; font-size: 10px; font-weight: bold; z-index: 30; }
 
         @media (orientation: landscape) {
@@ -69,7 +74,7 @@
         </div>
     </div>
     <div id="right-pane">
-        <div id="room-area"><div class="room-tile"><div class="room-num" style="color:#666; font-size: 80px;">--</div></div></div>
+        <div id="room-area"><div class="room-tile"><div class="room-num" style="color:#222; font-size: 80px;">--</div></div></div>
         <div id="bottom-controls">
             <div class="control-tile" style="color:var(--accent-amber);"><span style="font-size: 8px; opacity: 0.7;">REMAINING</span><div id="timer-clock">00:00</div></div>
             <button id="mainBtn" class="control-tile" style="background:var(--accent-green); color:black;" onclick="handlePower()">START</button>
@@ -80,13 +85,10 @@
 
 <div id="settings-overlay">
     <div id="settings-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
             <h2 style="color:var(--accent-green); margin:0;">Calibration</h2>
             <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size: 16px;">CLOSE</button>
         </div>
-
-        <button class="btn-theme" onclick="toggleTheme()">SWITCH LIGHT/DARK MODE</button>
-
         <div class="s-row"><label>Box Width</label><input type="range" id="boxW" min="50" max="1000" value="380"></div>
         <div class="s-row"><label>Box Height</label><input type="range" id="boxH" min="20" max="500" value="90"></div>
         <div class="s-row"><label>Horizontal</label><input type="range" id="boxX" min="-50" max="50" value="0"></div>
@@ -107,9 +109,6 @@
 
     function toggleCfg() { document.getElementById('settings-overlay').classList.toggle('open'); }
     
-    // THEME TOGGLE FUNCTION
-    function toggleTheme() { document.body.classList.toggle('light-mode'); }
-
     function loadVoices() {
         voices = synth.getVoices().filter(v => v.lang.includes('en'));
         voiceSel.innerHTML = voices.map((v, i) => `<option value="${i}">${v.name}</option>`).join('');
@@ -140,7 +139,10 @@
                 startEngine(); setInterval(tick, 1000);
             } catch (e) { alert("Camera access denied."); }
         } else {
-            location.reload(); // Safer stop for mobile browsers
+            isRunning = false; clearInterval(engine); 
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            video.srcObject = null; mainBtn.innerText = "START"; mainBtn.style.background = "var(--accent-green)";
+            activeRooms = []; render();
         }
     }
 
@@ -159,7 +161,7 @@
             
             const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
             
-            // YOUR ORIGINAL 3rd/4th DIGIT LOGIC
+            // Logic to handle 3rd and 4th digits specifically
             const found = (text.match(/\d{4,5}/g) || [])
                 .map(n => n.substring(2, 4)) 
                 .filter((v,i,a) => v.length === 2 && a.indexOf(v)===i)
@@ -176,7 +178,7 @@
                 }
             } else {
                 activeRooms = []; lastSetString = "";
-                roomArea.innerHTML = `<div class="room-tile"><div class="room-num" style="color:#666; font-size: 80px;">--</div></div>`;
+                roomArea.innerHTML = `<div class="room-tile"><div class="room-num" style="color:#222; font-size: 80px;">--</div></div>`;
             }
         }, 2200);
     }
@@ -184,10 +186,6 @@
     function render() {
         const count = activeRooms.length, isL = window.innerWidth > window.innerHeight;
         const fs = isL ? (count === 1 ? '55dvh' : '30dvh') : (count === 1 ? '35dvh' : '22dvh');
-        if(activeRooms.length === 0) {
-             roomArea.innerHTML = `<div class="room-tile"><div class="room-num" style="color:#666; font-size: 80px;">--</div></div>`;
-             return;
-        }
         roomArea.innerHTML = activeRooms.map(r => `
             <div class="room-tile">
                 <div class="room-num" style="font-size: ${fs}">${r}</div>
@@ -207,7 +205,7 @@
     function testAudio() { 
         const msg = new SpeechSynthesisUtterance("Voice engine active");
         if(voices.length > 0) msg.voice = voices[voiceSel.value];
-        msg.volume = 0.2;
+        msg.volume = 0.1;
         synth.speak(msg); 
     }
 
