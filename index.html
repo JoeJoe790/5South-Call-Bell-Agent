@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root {
-            --bg: #000; --tile: #1c1c1e; --text: #fff; --accent: #30d158; --dim: #8e8e93;
+            --bg: #000; --tile: #1c1c1e; --text: #fff; --accent: #30d158; --dim: #8e8e93; --red: #ff453a;
         }
         body.light {
             --bg: #f2f2f7; --tile: #fff; --text: #000; --accent: #007aff; --dim: #6e6e73;
@@ -17,34 +17,44 @@
             font-family: -apple-system, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* 50/40/10 SPLIT */
+        /* 50/40/10 SPLIT & RESPONSIVE */
         #cam-sec { height: 50vh; position: relative; padding: 10px; box-sizing: border-box; }
-        #room-sec { height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--tile); margin: 0 10px; border-radius: 25px; }
+        #room-sec { height: 40vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--tile); margin: 0 10px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
         #control-sec { height: 10vh; display: flex; gap: 10px; padding: 10px; box-sizing: border-box; }
 
-        #video-wrap { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; background: #111; position: relative; border: 1px solid #333; }
-        #video { width: 100%; height: 100%; object-fit: cover; }
-        #scan-box { position: absolute; border: 2px solid #ff453a; border-radius: 8px; pointer-events: none; box-shadow: 0 0 10px rgba(255,69,58,0.4); }
+        @media (orientation: landscape) {
+            body { flex-direction: row; }
+            #cam-sec { width: 50vw; height: 100vh; }
+            #room-sec { width: 40vw; height: calc(100vh - 20px); margin: 10px 0; }
+            #control-sec { width: 10vw; height: 100vh; flex-direction: column; }
+            .big-num { font-size: 15vh !important; }
+        }
 
-        .big-num { font-size: 28vh; font-weight: 900; line-height: 1; margin: 0; }
-        .label { font-size: 14px; font-weight: 800; color: var(--accent); letter-spacing: 2px; }
+        #video-wrap { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; background: #000; position: relative; border: 1px solid #333; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        #scan-box { position: absolute; border: 3px solid var(--red); border-radius: 10px; pointer-events: none; z-index: 5; box-shadow: 0 0 15px rgba(255,69,58,0.4); }
+
+        .big-num { font-size: 25vh; font-weight: 900; line-height: 0.9; margin: 0; letter-spacing: -2px; }
+        .label { font-size: 12px; font-weight: 800; color: var(--accent); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
 
         /* TILES */
         .tile-btn { flex: 1; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-family: inherit; cursor: pointer; }
-        #timer-tile { background: var(--tile); color: #ff9f0a; font-weight: bold; }
-        #status-btn { background: var(--accent); color: #000; font-weight: 800; font-size: 16px; transition: 0.2s; }
-        #status-btn.active { background: #ff453a; color: #fff; }
-
-        /* SETTINGS */
-        #settings { position: fixed; inset: 0; background: var(--bg); z-index: 100; padding: 25px; display: none; overflow-y: auto; }
-        .s-row { margin-bottom: 22px; }
-        .s-row b { display: block; margin-bottom: 10px; font-size: 15px; text-transform: uppercase; color: var(--text); font-weight: 800; }
-        .rep-val { float: right; color: var(--accent); font-weight: 900; font-size: 18px; }
+        #timer-tile { background: var(--tile); color: #ff9f0a; font-weight: bold; border: 1px solid rgba(255,159,10,0.2); }
+        #status-btn { background: var(--accent); color: #000; font-weight: 900; font-size: 14px; }
         
-        input[type=range] { width: 100%; height: 40px; accent-color: var(--accent); }
-        select { width: 100%; padding: 15px; border-radius: 14px; background: var(--tile); color: var(--text); border: 1px solid #444; font-size: 16px; }
+        /* SETTINGS OVERLAY */
+        #settings { position: fixed; inset: 0; background: var(--bg); z-index: 100; padding: 25px; display: none; overflow-y: auto; }
+        .s-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .s-row { margin-bottom: 18px; }
+        .s-row b { display: block; margin-bottom: 8px; font-size: 13px; text-transform: uppercase; font-weight: 800; color: var(--dim); }
+        .val-tag { float: right; color: var(--accent); font-weight: 900; }
+        
+        input[type=range] { width: 100%; height: 35px; accent-color: var(--accent); }
+        select { width: 100%; padding: 12px; border-radius: 12px; background: var(--tile); color: var(--text); border: 1px solid #444; }
 
-        #menu-btn { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6); border: 1px solid #444; color: #fff; padding: 10px 15px; border-radius: 12px; z-index: 10; font-weight: bold; }
+        #menu-btn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.6); border: none; color: #fff; padding: 10px; border-radius: 12px; z-index: 10; font-weight: bold; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #444; display: inline-block; transition: 0.3s; }
+        .thinking .status-dot { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
     </style>
 </head>
 <body>
@@ -58,42 +68,54 @@
     </div>
 
     <div id="room-sec">
-        <span class="label">ACTIVE ROOM</span>
+        <span class="label">Call Alert</span>
         <div id="num" class="big-num">--</div>
+        <div id="status-line" style="font-size: 10px; color: var(--dim); margin-top: 10px;">
+            <div class="status-dot"></div> <span id="status-text">SYSTEM IDLE</span>
+        </div>
     </div>
 
     <div id="control-sec">
         <div id="timer-tile" class="tile-btn">
-            <span style="font-size: 9px; color: var(--dim)">REMAINING</span>
+            <span style="font-size: 9px; opacity: 0.7;">REMAINING</span>
             <div id="clock">READY</div>
         </div>
         <button id="status-btn" class="tile-btn" onclick="toggleSystem()">START SYSTEM</button>
     </div>
 
     <div id="settings">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
-            <h2 style="margin:0; font-weight: 900;">Settings</h2>
-            <button onclick="closeSet()" style="background:var(--accent); border:none; padding:12px 25px; border-radius:12px; font-weight:bold; color:#000;">SAVE</button>
+        <div class="s-header">
+            <h2 style="margin:0; font-weight: 900;">Configuration</h2>
+            <button onclick="closeSet()" style="background:var(--accent); border:none; padding:10px 20px; border-radius:10px; font-weight:bold; color:#000;">SAVE</button>
         </div>
 
         <div class="s-row">
-            <b>iOS Appearance</b>
-            <button onclick="document.body.classList.toggle('light')" style="width:100%; padding:15px; border-radius:14px; border:none; background:var(--tile); color:var(--text); font-weight:bold; font-size: 14px;">Toggle Light / Dark Mode</button>
+            <b>Theme Mode</b>
+            <button onclick="document.body.classList.toggle('light')" style="width:100%; padding:12px; border-radius:12px; border:none; background:var(--tile); color:var(--text); font-weight:bold;">Switch Light / Dark</button>
         </div>
 
-        <div class="s-row"><b>Box Width</b><input type="range" id="boxW" min="50" max="600" value="350"></div>
-        <div class="s-row"><b>Box Height</b><input type="range" id="boxH" min="20" max="300" value="70"></div>
-        <div class="s-row"><b>Y Position</b><input type="range" id="boxY" min="-40" max="40" value="0"></div>
+        <div class="s-row"><b>Box Width / Height</b>
+            <input type="range" id="boxW" min="50" max="800" value="350">
+            <input type="range" id="boxH" min="20" max="400" value="70">
+        </div>
+
+        <div class="s-row"><b>Box Offset (X / Y)</b>
+            <input type="range" id="boxX" min="-50" max="50" value="0">
+            <input type="range" id="boxY" min="-50" max="50" value="0">
+        </div>
         
+        <div class="s-row"><b>OCR Threshold (Contrast)</b><input type="range" id="thresh" min="50" max="220" value="135"></div>
+
         <div class="s-row">
-            <b>Repeat Alert <span class="rep-val" id="rV">2m</span></b>
+            <b>Repeat Alert <span class="val-tag" id="rV">2m</span></b>
             <input type="range" id="repS" min="1" max="15" value="2">
         </div>
 
         <div class="s-row">
-            <b>Voice Engine</b>
-            <select id="vSelect"></select>
-            <button onclick="testVoice()" style="width:100%; margin-top:15px; padding:15px; border-radius:14px; border:2px solid var(--accent); background:none; color:var(--accent); font-weight:bold;">TEST AUDIO</button>
+            <b>Voice Engine & Volume</b>
+            <select id="vSelect" style="margin-bottom: 10px;"></select>
+            <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
+            <button onclick="testVoice()" style="width:100%; margin-top:10px; padding:15px; border-radius:14px; border:2px solid var(--accent); background:none; color:var(--accent); font-weight:bold;">TEST AUDIO</button>
         </div>
     </div>
 
@@ -101,16 +123,20 @@
         const video = document.getElementById('video');
         const box = document.getElementById('scan-box');
         const statusBtn = document.getElementById('status-btn');
+        const roomDisp = document.getElementById('num');
+        const statusLine = document.getElementById('status-line');
         let synth = window.speechSynthesis;
-        let isRunning = false, timeLeft = 0, lastRoom = "";
+        let isRunning = false, timeLeft = 0, lastSet = "";
 
         function openSet() { document.getElementById('settings').style.display = 'block'; }
         function closeSet() { document.getElementById('settings').style.display = 'none'; }
 
         function updateLayout() {
-            const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value, y = document.getElementById('boxY').value;
+            const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value;
+            const x = document.getElementById('boxX').value, y = document.getElementById('boxY').value;
             box.style.width = w+'px'; box.style.height = h+'px';
-            box.style.left = `calc(50% - ${w/2}px)`; box.style.top = `calc(50% + ${y}% - ${h/2}px)`;
+            box.style.left = `calc(50% + ${x}% - ${w/2}px)`;
+            box.style.top = `calc(50% + ${y}% - ${h/2}px)`;
             document.getElementById('rV').innerText = document.getElementById('repS').value+'m';
         }
         document.querySelectorAll('input').forEach(i => i.oninput = updateLayout);
@@ -118,36 +144,37 @@
 
         function loadVoices() {
             const voices = synth.getVoices();
-            // Filter for high quality/natural sounding english voices
-            const filtered = voices.filter(v => v.lang.includes('en') && (v.name.includes('Premium') || v.name.includes('Natural') || v.name.includes('Apple') || v.name.includes('Google')));
-            const list = filtered.length > 0 ? filtered : voices.slice(0, 15);
-            document.getElementById('vSelect').innerHTML = list.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+            const filtered = voices.filter(v => v.lang.includes('en') && (v.name.includes('Premium') || v.name.includes('Natural') || v.name.includes('Apple')));
+            document.getElementById('vSelect').innerHTML = (filtered.length ? filtered : voices.slice(0,15)).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
         }
         speechSynthesis.onvoiceschanged = loadVoices; loadVoices();
 
         function testVoice() {
             synth.cancel();
-            const msg = new SpeechSynthesisUtterance("Testing natural voice for Room 1 0.");
+            const msg = new SpeechSynthesisUtterance("Audio check successful.");
             msg.voice = synth.getVoices().find(v => v.name === document.getElementById('vSelect').value);
+            msg.volume = document.getElementById('vol').value;
             synth.speak(msg);
         }
 
         async function toggleSystem() {
             if (isRunning) { location.reload(); return; }
             try {
-                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
                 video.srcObject = s; isRunning = true;
-                statusBtn.innerText = "STOP SYSTEM"; statusBtn.classList.add('active');
+                statusBtn.innerText = "STOP"; statusBtn.style.background = "var(--red)"; statusBtn.style.color = "#fff";
+                document.getElementById('status-text').innerText = "MONITORING ACTIVE";
                 startOCR(); setInterval(tick, 1000);
-            } catch(e) { alert("Camera Error: Please check permissions."); }
+            } catch(e) { alert("Camera Access Required"); }
         }
 
-        function speak(txt) {
+        function speak(rooms) {
             synth.cancel();
-            // Splits digits (e.g., "12" becomes "1 2") for better clarity in hospital settings
-            const msg = new SpeechSynthesisUtterance("Room " + txt.split('').join(' '));
+            let msgText = rooms.length === 1 ? "Room " + rooms[0] : "Rooms " + rooms.slice(0,-1).join(", ") + " and " + rooms.slice(-1);
+            const msg = new SpeechSynthesisUtterance(msgText);
             msg.voice = synth.getVoices().find(v => v.name === document.getElementById('vSelect').value);
-            msg.rate = 0.85; synth.speak(msg);
+            msg.volume = document.getElementById('vol').value;
+            msg.rate = 0.9; synth.speak(msg);
         }
 
         async function startOCR() {
@@ -155,24 +182,57 @@
             const ctx = canvas.getContext('2d');
             setInterval(async () => {
                 if (!isRunning || !video.videoWidth) return;
-                const f = video.videoWidth / video.offsetWidth;
-                const cw = document.getElementById('boxW').value * f, ch = document.getElementById('boxH').value * f;
-                const cx = (video.videoWidth/2) - (cw/2), cy = (video.videoHeight/2) + (document.getElementById('boxY').value/100*video.videoHeight) - (ch/2);
+                
+                const fX = video.videoWidth / video.offsetWidth;
+                const fY = video.videoHeight / video.offsetHeight;
+                const cw = document.getElementById('boxW').value * fX;
+                const ch = document.getElementById('boxH').value * fY;
+                const cx = (video.videoWidth/2) + ((document.getElementById('boxX').value/100)*video.videoWidth) - (cw/2);
+                const cy = (video.videoHeight/2) + ((document.getElementById('boxY').value/100)*video.videoHeight) - (ch/2);
+
                 canvas.width = cw; canvas.height = ch;
                 ctx.drawImage(video, cx, cy, cw, ch, 0, 0, cw, ch);
-                const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                const room = text.replace(/\D/g, "").slice(-2);
-                if (room.length >= 2) {
-                    document.getElementById('num').innerText = room;
-                    if (room !== lastRoom) { lastRoom = room; speak(room); timeLeft = document.getElementById('repS').value * 60; }
+                
+                let img = ctx.getImageData(0,0,cw,ch);
+                let d = img.data;
+                let th = document.getElementById('thresh').value;
+                for(let i=0; i<d.length; i+=4) {
+                    let v = (d[i]+d[i+1]+d[i+2])/3 > th ? 255 : 0;
+                    d[i]=d[i+1]=d[i+2]=v;
                 }
-            }, 2000);
+                ctx.putImageData(img,0,0);
+
+                statusLine.classList.add('thinking');
+                const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+                statusLine.classList.remove('thinking');
+
+                const matches = text.match(/\d{4,5}/g) || [];
+                const filtered = matches.map(num => num.substring(2, 4)).filter((v, i, a) => a.indexOf(v) === i && parseInt(v) > 0).sort();
+
+                if (filtered.length > 0) {
+                    roomDisp.innerText = filtered.join(" ");
+                    if (filtered.join(",") !== lastSet) {
+                        lastSet = filtered.join(",");
+                        speak(filtered);
+                        timeLeft = document.getElementById('repS').value * 60;
+                    }
+                } else {
+                    roomDisp.innerText = "--";
+                    lastSet = "";
+                }
+            }, 1800);
         }
 
         function tick() {
-            if (!isRunning || !lastRoom) return;
-            if (timeLeft <= 0) { speak(lastRoom); timeLeft = document.getElementById('repS').value * 60; }
-            else { timeLeft--; const m = Math.floor(timeLeft/60), s = timeLeft%60; document.getElementById('clock').innerText = `${m}:${s<10?'0':''}${s}`; }
+            if (!isRunning || lastSet === "") return;
+            if (timeLeft <= 0) {
+                speak(lastSet.split(","));
+                timeLeft = document.getElementById('repS').value * 60;
+            } else {
+                timeLeft--;
+                const m = Math.floor(timeLeft/60), s = timeLeft%60;
+                document.getElementById('clock').innerText = `${m}:${s<10?'0':''}${s}`;
+            }
         }
     </script>
 </body>
