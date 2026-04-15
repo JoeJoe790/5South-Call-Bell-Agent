@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>Smart Call Bell - Transparent Settings</title>
+    <title>Smart Call Bell - Fixed Landscape</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root { 
@@ -14,8 +14,7 @@
             --accent-amber: #ff9f0a; 
             --text-main: #ffffff;
             --text-dim: #8e8e93;
-            --room-text: #ffffff;
-            --settings-bg: rgba(0, 0, 0, 0.75); /* Transparent Dark */
+            --settings-bg: rgba(0, 0, 0, 0.75);
         }
 
         body.light-mode {
@@ -23,61 +22,103 @@
             --tile: #ffffff;
             --text-main: #000000;
             --text-dim: #3a3a3c;
-            --room-text: #1c1c1e;
-            --settings-bg: rgba(255, 255, 255, 0.75); /* Transparent Light */
+            --settings-bg: rgba(255, 255, 255, 0.75);
         }
         
         body { 
             margin: 0; background: var(--bg); color: var(--text-main); 
             font-family: -apple-system, system-ui, sans-serif; 
-            overflow: hidden; height: 100dvh; display: flex;
-            padding-bottom: env(safe-area-inset-bottom);
+            overflow: hidden; 
+            height: 100dvh; /* Critical: Dynamic height for Safari */
+            display: flex;
         }
 
-        #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; }
+        #main-wrapper { 
+            display: flex; 
+            flex-direction: column; 
+            width: 100%; 
+            height: 100%; 
+        }
 
+        /* PORTRAIT DEFAULTS */
         #cam-area { height: 40dvh; padding: 10px; box-sizing: border-box; flex-shrink: 0; }
         #room-area { height: 50dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; overflow: hidden; }
-        #bottom-controls { height: 10dvh; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; padding: 5px 10px 10px; border-top: 1px solid #44444433; }
+        #bottom-controls { 
+            height: 10dvh; 
+            display: grid; 
+            grid-template-columns: 1fr 1.2fr 1fr; 
+            gap: 8px; 
+            padding: 5px 10px calc(5px + env(safe-area-inset-bottom)); /* Safari Protection */
+            border-top: 1px solid #44444433; 
+        }
 
+        /* LANDSCAPE FIX: 40/60 SIDE-BY-SIDE */
         @media (orientation: landscape) {
             #main-wrapper { flex-direction: row; }
-            #cam-area { width: 40vw; height: 100vh; border-right: 1px solid #44444433; }
-            #right-pane { width: 60vw; height: 100vh; display: flex; flex-direction: column; }
-            #room-area { height: 85vh; } 
-            #bottom-controls { height: 15vh; } 
+            #cam-area { width: 40vw; height: 100dvh; border-right: 1px solid #44444433; padding: 15px; }
+            #right-pane { 
+                width: 60vw; 
+                height: 100dvh; 
+                display: flex; 
+                flex-direction: column; 
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+            #room-area { height: 85%; } /* Maximize space for numbers */
+            #bottom-controls { height: 15%; padding: 5px 15px; }
         }
 
         #cam-card { width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; background: #111; }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 6px; pointer-events: none; z-index: 5; }
 
-        .room-num { font-weight: 900; line-height: 0.8; letter-spacing: -10px; text-align: center; width: 100%; height: 85%; display: flex; align-items: center; justify-content: center; color: var(--room-text); }
-        .control-tile { background: var(--tile); border-radius: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; }
+        .room-num { 
+            font-weight: 900; 
+            line-height: 0.8; 
+            letter-spacing: -10px; 
+            text-align: center; 
+            width: 100%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: font-size 0.2s;
+        }
+
+        .control-tile { 
+            background: var(--tile); 
+            border-radius: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            border: none; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            font-size: 11px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
         .amber-text { color: var(--accent-amber); }
 
-        /* TRANSPARENT SETTINGS OVERLAY */
+        /* TRANSPARENT SETTINGS */
         #settings-ui { 
             position: absolute; inset: 0; 
             background: var(--settings-bg); 
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             z-index: 100; display: none; padding: 40px 20px; overflow-y: auto; 
         }
         #settings-ui.open { display: block; }
-        .s-row { display: flex; align-items: center; margin-bottom: 22px; gap: 12px; }
+        .s-row { display: flex; align-items: center; margin-bottom: 20px; gap: 12px; }
         .s-row label { flex: 0 0 120px; font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; }
         .s-row input[type=range] { flex: 1; accent-color: var(--accent-green); }
         .s-val { flex: 0 0 50px; text-align: right; font-size: 14px; font-weight: bold; color: var(--accent-amber); }
         
-        #cfg-toggle { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 10px; font-size: 10px; z-index: 10; cursor: pointer; }
+        #cfg-toggle { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #444; padding: 6px 12px; border-radius: 10px; font-size: 10px; z-index: 10; }
         
-        .switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #3a3a3c; transition: .4s; border-radius: 24px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #3a3a3c; transition: .4s; border-radius: 22px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: var(--accent-green); }
-        input:checked + .slider:before { transform: translateX(26px); }
+        input:checked + .slider:before { transform: translateX(22px); }
     </style>
 </head>
 <body>
@@ -93,7 +134,7 @@
 
     <div id="right-pane">
         <div id="room-area">
-            <div class="room-num" style="color:#222; font-size: 120px;">--</div>
+            <div class="room-num" style="color:#333; font-size: 100px;">--</div>
         </div>
 
         <div id="bottom-controls">
@@ -101,24 +142,21 @@
                 <span style="font-size: 8px; opacity: 0.7;">REMAINING</span>
                 <div id="timer-clock">00:00</div>
             </div>
-            <button id="mainBtn" class="control-tile" style="background: var(--accent-green); color: black;" onclick="togglePower()">START</button>
+            <button id="mainBtn" class="control-tile" style="background: var(--accent-green); color: #000;" onclick="togglePower()">START</button>
             <button id="muteBtn" class="control-tile amber-text" onclick="toggleMute()">MUTE</button>
         </div>
     </div>
 </div>
 
 <div id="settings-ui">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
         <h2 style="color: var(--accent-green); margin:0;">Calibration</h2>
-        <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size: 16px;">CLOSE</button>
+        <button onclick="toggleCfg()" style="background:none; border:none; color:var(--accent-red); font-weight:900; font-size: 15px;">CLOSE</button>
     </div>
 
     <div class="s-row">
         <label>Light Mode</label>
-        <label class="switch">
-            <input type="checkbox" id="theme-switch" onchange="toggleTheme()">
-            <span class="slider"></span>
-        </label>
+        <label class="switch"><input type="checkbox" id="theme-switch" onchange="toggleTheme()"><span class="slider"></span></label>
     </div>
 
     <div class="s-row"><label>Scan Width</label><input type="range" id="boxW" min="100" max="800" value="380"></div>
@@ -143,23 +181,17 @@
     let synth = window.speechSynthesis, activeRooms = [], lastSet = "", countdown = 0, isRunning = false, isMuted = false, engine;
 
     function toggleCfg() { document.getElementById('settings-ui').classList.toggle('open'); }
-    
-    function toggleTheme() {
-        document.body.classList.toggle('light-mode', document.getElementById('theme-switch').checked);
-    }
+    function toggleTheme() { document.body.classList.toggle('light-mode', document.getElementById('theme-switch').checked); }
 
     function updateSettings() {
         const w = document.getElementById('boxW').value, h = document.getElementById('boxH').value;
         const x = document.getElementById('boxX').value, y = document.getElementById('boxY').value;
         const r = document.getElementById('repeat').value;
-        
         scanBox.style.width = w + 'px'; scanBox.style.height = h + 'px';
         scanBox.style.left = `calc(50% + ${x}% - ${w/2}px)`; 
         scanBox.style.top = `calc(50% + ${y}% - ${h/2}px)`;
-        
         document.getElementById('vR').innerText = r + 'm';
     }
-    
     document.querySelectorAll('input').forEach(i => i.oninput = updateSettings);
     updateSettings();
 
@@ -196,7 +228,11 @@
 
     function render() {
         const count = activeRooms.length;
-        const fs = count === 1 ? '40dvh' : count === 2 ? '20dvh' : '13dvh';
+        const isLandscape = window.innerWidth > window.innerHeight;
+        // Adjust font size based on orientation to fill 85% of available height
+        const fs = isLandscape 
+            ? (count === 1 ? '55dvh' : '28dvh') 
+            : (count === 1 ? '40dvh' : '20dvh');
         roomArea.innerHTML = activeRooms.map(r => `<div class="room-num" style="font-size: ${fs}">${r}</div>`).join('');
     }
 
@@ -214,6 +250,8 @@
             else { countdown--; timerClock.innerText = Math.floor(countdown/60).toString().padStart(2,'0') + ":" + (countdown%60).toString().padStart(2,'0'); }
         } else { timerClock.innerText = "00:00"; }
     }
+    
+    window.addEventListener('resize', render);
 </script>
 </body>
 </html>
