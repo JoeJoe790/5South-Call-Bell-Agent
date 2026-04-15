@@ -3,131 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Smart Call Bell - Pro</title>
+    <title>Nurse Monitor Pro - Ascom Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        :root { 
-            --bg: #0f1115; 
-            --card: #1c1f26; 
-            --accent-red: #ff3b30; 
-            --accent-green: #28cd41; 
-            --text-main: #ffffff;
-            --text-dim: #a0a0a0;
-        }
+        :root { --accent: #28cd41; --danger: #ff3b30; --warning: #ffcc00; }
+        body { margin: 0; background: #000; color: #fff; font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
-        body { margin: 0; background: var(--bg); color: var(--text-main); font-family: -apple-system, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        
-        /* Layout logic based on your landscape/portrait requirements */
+        /* LANDSCAPE: Split View (Camera Left, Numbers Right) */
         @media (orientation: landscape) {
             body { flex-direction: row; }
-            #video-container { flex: 1.4; height: 100vh; border-right: 1px solid #333; }
-            #dashboard { flex: 0.6; height: 100vh; padding: 20px; overflow-y: auto; justify-content: flex-start; }
-            .room-number { font-size: 8vw !important; }
+            #video-container { flex: 1.2; height: 100vh; border-right: 2px solid #333; }
+            #dashboard { flex: 0.8; height: 100vh; padding: 10px; justify-content: flex-start; }
+            #room-display { display: flex; flex-direction: column; gap: 5px; font-size: 10vw !important; padding-top: 20px; }
         }
 
+        /* PORTRAIT: Stacked View */
         @media (orientation: portrait) {
             #video-container { flex: 1; width: 100vw; }
-            #dashboard { flex: 1; border-top: 1px solid #333; padding: 20px; border-radius: 30px 30px 0 0; margin-top: -20px; z-index: 10; }
-            .room-number { font-size: 25vw !important; }
+            #dashboard { flex: 1; border-top: 2px solid #333; padding: 20px; }
+            #room-display { font-size: 10rem; }
         }
 
-        /* Camera & Scan UI */
         #video-container { position: relative; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-        #video { width: 100%; height: 100%; object-fit: cover; opacity: 0.9; }
-        #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 12px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,59,48,0.3); }
-        #scan-box::after { content: '●'; color: var(--accent-red); position: absolute; top: -10px; right: -5px; font-size: 20px; }
+        #video { width: 100%; height: 100%; object-fit: cover; }
+        #scan-box { position: absolute; border: 3px solid var(--danger); border-radius: 4px; pointer-events: none; z-index: 5; box-shadow: 0 0 20px rgba(255,59,48,0.6); }
 
-        /* Dashboard & Cards */
-        #dashboard { background: var(--bg); display: flex; flex-direction: column; position: relative; gap: 15px; }
-        .card { background: var(--card); border-radius: 18px; padding: 15px; border: 1px solid #2d3139; }
-        .label { font-size: 10px; font-weight: 800; color: var(--accent-red); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
-        .label::before { content: '∿'; font-size: 14px; }
-        
-        .room-display-area { flex-grow: 1; display: flex; align-items: center; justify-content: center; min-height: 120px; }
-        .room-number { font-weight: 900; color: var(--text-main); text-align: center; line-height: 0.8; letter-spacing: -2px; }
-        
-        /* Transparent Settings Panel on Top of Camera */
-        #settings-panel { position: absolute; top: 10px; left: 10px; right: 10px; background: rgba(28, 31, 38, 0.8); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border-radius: 15px; padding: 15px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); display: none; max-height: 80vh; overflow-y: auto; }
-        #settings-panel.open { display: block; }
-        
-        .setting-item { margin-bottom: 12px; }
-        .setting-item label { font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 4px; font-weight: bold; }
-        
-        input[type=range] { -webkit-appearance: none; width: 100%; background: #333; height: 4px; border-radius: 2px; outline: none; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent-red); border-radius: 50%; cursor: pointer; border: 3px solid var(--card); }
+        #dashboard { background: #000; display: flex; flex-direction: column; align-items: center; position: relative; }
+        #room-display { font-weight: 900; color: var(--accent); text-align: center; width: 100%; line-height: 0.9; }
+        #timer-display { font-size: 0.9rem; color: var(--warning); margin-top: auto; padding-bottom: 30px; font-weight: bold; font-family: monospace; }
+        #status-light { font-size: 0.6rem; color: #444; position: absolute; bottom: 5px; right: 10px; text-transform: uppercase; }
 
-        #menu-btn { position: absolute; top: 15px; right: 15px; background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 15px; border-radius: 10px; z-index: 101; font-weight: bold; font-size: 12px; cursor: pointer; backdrop-filter: blur(5px); }
-        
-        #startBtn { position: absolute; inset: 0; background: var(--bg); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; color: white; }
-        .power-icon { width: 80px; height: 80px; border-radius: 50%; border: 4px solid var(--accent-green); display: flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 20px; color: var(--accent-green); box-shadow: 0 0 30px rgba(40, 205, 65, 0.2); }
+        #settings-menu { position: fixed; right: -320px; top: 0; width: 280px; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 100; transition: 0.3s; padding: 20px; border-left: 1px solid #444; overflow-y: auto; }
+        #settings-menu.open { right: 0; }
+        .setting-row { margin-bottom: 15px; display: flex; flex-direction: column; }
+        .slider-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .label-text { font-size: 0.65rem; color: #00e5ff; font-weight: bold; width: 70px; }
+        input[type=range] { flex: 1; accent-color: var(--accent); }
 
-        .timer-bar { font-family: monospace; font-size: 12px; color: var(--accent-green); text-align: center; margin-top: 10px; font-weight: bold; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #444; display: inline-block; margin-right: 5px; }
-        .status-active .status-dot { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; }
+        #menu-toggle { position: absolute; top: 10px; right: 10px; background: rgba(51,51,51,0.8); color: #fff; border: 1px solid #777; padding: 12px; border-radius: 10px; z-index: 101; cursor: pointer; }
+        #startBtn { background: var(--accent); color: white; border: none; padding: 25px 50px; border-radius: 15px; font-size: 1.5rem; font-weight: bold; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .close-btn { background: #007aff; width: 100%; padding: 12px; border: none; color: white; border-radius: 8px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <button id="startBtn">
-        <div class="power-icon">⏻</div>
-        <span style="font-weight: bold; letter-spacing: 2px;">START SYSTEM</span>
-    </button>
-
     <div id="video-container">
         <video id="video" autoplay playsinline></video>
         <div id="scan-box"></div>
-        <button id="menu-btn" onclick="toggleSettings()">⚙️ SETTINGS</button>
-        
-        <div id="settings-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <span style="font-weight: bold; font-size: 14px;">Scanner Calibration</span>
-                <button onclick="toggleSettings()" style="background:none; border:none; color:var(--accent-red); font-weight:bold;">CLOSE</button>
-            </div>
-            
-            <div class="setting-item">
-                <label>BOX SIZE (WIDTH / HEIGHT)</label>
-                <input type="range" id="boxW" min="50" max="800" value="300">
-                <input type="range" id="boxH" min="20" max="400" value="60" style="margin-top:10px;">
-            </div>
-            
-            <div class="setting-item">
-                <label>OFFSET (HORIZONTAL / VERTICAL)</label>
-                <input type="range" id="boxX" min="-50" max="50" value="0">
-                <input type="range" id="boxY" min="-50" max="50" value="0" style="margin-top:10px;">
-            </div>
-
-            <div class="setting-item">
-                <label>OCR CONTRAST (THRESHOLD)</label>
-                <input type="range" id="threshold" min="50" max="220" value="135">
-            </div>
-
-            <div class="setting-item">
-                <label>REPEAT ALERT: <span id="repLabel">2m</span></label>
-                <input type="range" id="repSlider" min="1" max="15" value="2">
-            </div>
-
-            <div class="setting-item">
-                <label>VOICE & VOLUME</label>
-                <select id="voiceSelect" style="width:100%; background:#333; color:white; border:none; padding:8px; border-radius:5px; margin-bottom:8px;"></select>
-                <input type="range" id="vol" min="0" max="1" step="0.1" value="1">
-            </div>
-            
-            <button id="testBtn" style="width:100%; background:var(--accent-red); color:white; border:none; padding:10px; border-radius:8px; font-weight:bold; margin-top:5px;">TEST AUDIO</button>
-        </div>
+        <div id="menu-toggle">⚙️</div>
     </div>
 
     <div id="dashboard">
-        <div class="card" style="flex-grow: 1; display: flex; flex-direction: column;">
-            <div class="label">Call Alert Detection</div>
-            <div class="room-display-area">
-                <div id="room-display" class="room-number">--</div>
-            </div>
-            <div id="timer-display" class="timer-bar">MONITORING STANDBY...</div>
-        </div>
+        <button id="startBtn">START SYSTEM</button>
+        <div id="room-display"></div>
+        <div id="timer-display"></div>
+        <div id="status-light">Idle</div>
+    </div>
 
-        <div id="status-indicator" style="padding: 10px; font-size: 10px; color: var(--text-dim); display: flex; align-items: center;">
-            <div class="status-dot"></div> <span id="status-text">SYSTEM IDLE</span>
+    <div id="settings-menu">
+        <h3 style="margin-top:0; color:var(--accent);">Calibration</h3>
+        <div class="setting-row">
+            <div class="slider-group"><span class="label-text">Box Width</span><input type="range" id="boxW" min="50" max="800" value="300"></div>
+            <div class="slider-group"><span class="label-text">Box Height</span><input type="range" id="boxH" min="20" max="400" value="60"></div>
         </div>
+        <div class="setting-row">
+            <div class="slider-group"><span class="label-text">X-Pos</span><input type="range" id="boxX" min="-50" max="50" value="0"></div>
+            <div class="slider-group"><span class="label-text">Y-Pos</span><input type="range" id="boxY" min="-50" max="50" value="0"></div>
+        </div>
+        <div class="setting-row">
+            <label style="font-size: 0.7rem; color: var(--warning);">REPEAT ALERT: <span id="repLabel">2m</span></label>
+            <input type="range" id="repSlider" min="1" max="15" value="2">
+        </div>
+        <div class="setting-row">
+            <label style="font-size: 0.7rem;">OCR CONTRAST (Threshold)</label>
+            <input type="range" id="threshold" min="50" max="220" value="135">
+        </div>
+        <div class="setting-row">
+            <label style="font-size: 0.7rem;">VOICE & VOLUME</label>
+            <select id="voiceSelect" style="background:#222; color:white; border:1px solid #777; padding:8px; border-radius:5px; margin-bottom:10px;"></select>
+            <div class="slider-group"><span class="label-text">Volume</span><input type="range" id="vol" min="0" max="1" step="0.1" value="1"></div>
+        </div>
+        <button id="testBtn" style="width:100%; background:transparent; color:white; padding:10px; border:1px solid #555; border-radius:8px;">Test Audio</button>
+        <button class="close-btn" onclick="toggleMenu()">SAVE & CLOSE</button>
     </div>
 
     <script>
@@ -135,9 +92,8 @@
         const startBtn = document.getElementById('startBtn');
         const roomDisplay = document.getElementById('room-display');
         const timerDisplay = document.getElementById('timer-display');
-        const statusText = document.getElementById('status-text');
-        const statusContainer = document.getElementById('status-indicator');
-        const panel = document.getElementById('settings-panel');
+        const statusLight = document.getElementById('status-light');
+        const menu = document.getElementById('settings-menu');
         const boxW = document.getElementById('boxW'), boxH = document.getElementById('boxH');
         const boxX = document.getElementById('boxX'), boxY = document.getElementById('boxY');
         const thresholdInput = document.getElementById('threshold');
@@ -146,7 +102,8 @@
         let synth = window.speechSynthesis;
         let activeRooms = []; let lastSet = ""; let timeLeft = 0;
 
-        function toggleSettings() { panel.classList.toggle('open'); }
+        function toggleMenu() { menu.classList.toggle('open'); }
+        document.getElementById('menu-toggle').onclick = toggleMenu;
 
         const updateBox = () => {
             scanBox.style.width = boxW.value + 'px';
@@ -172,9 +129,10 @@
         loadVoices();
 
         startBtn.onclick = async () => {
-            // Primitive Audio Nudge for Mobile
+            // Unlocking Audio for Mobile
             const v = new SpeechSynthesisUtterance("");
             synth.speak(v);
+
             try {
                 const s = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }, 
@@ -182,11 +140,11 @@
                 });
                 video.srcObject = s;
                 startBtn.style.display = 'none';
-                statusText.innerText = "MONITORING ACTIVE";
+                statusLight.innerText = "System Active";
                 startScanning();
                 setInterval(tick, 1000);
             } catch (err) {
-                alert("Camera Error. Please use HTTPS and allow camera access.");
+                alert("Camera access denied. Ensure you are on HTTPS.");
             }
         };
 
@@ -207,6 +165,7 @@
                 canvas.width = w; canvas.height = h;
                 ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
                 
+                // OCR Pre-Processing
                 let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 let data = imageData.data;
                 let thresh = thresholdInput.value;
@@ -217,9 +176,9 @@
                 }
                 ctx.putImageData(imageData, 0, 0);
 
-                statusContainer.classList.add('status-active');
+                statusLight.style.color = "#00e5ff";
                 const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                statusContainer.classList.remove('status-active');
+                statusLight.style.color = "#444";
 
                 // Logic: Grab digits 3 and 4 of any 4 or 5 digit number
                 const matches = text.match(/\d{4,5}/g) || [];
@@ -237,8 +196,8 @@
                         timeLeft = document.getElementById('repSlider').value * 60; 
                     }
                 } else {
-                    roomDisplay.innerHTML = "--"; 
-                    timerDisplay.innerText = "WAITING FOR CALL..."; 
+                    roomDisplay.innerHTML = ""; 
+                    timerDisplay.innerText = ""; 
                     lastSet = "";
                     activeRooms = [];
                 }
@@ -256,6 +215,7 @@
         function announce() {
             if (activeRooms.length === 0) return;
             synth.cancel();
+
             setTimeout(() => {
                 let msg = activeRooms.length === 1 ? "Room " + activeRooms[0] : "Rooms " + activeRooms.slice(0,-1).join(", ") + " and " + activeRooms.slice(-1);
                 const ut = new SpeechSynthesisUtterance(msg);
@@ -274,14 +234,14 @@
                     timeLeft = document.getElementById('repSlider').value * 60;
                 } else {
                     timeLeft--;
-                    timerDisplay.innerText = `NEXT ALERT IN: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
+                    timerDisplay.innerText = `NEXT ALERT: ${Math.floor(timeLeft/60)}m ${timeLeft%60}s`;
                 }
             }
         }
 
         document.getElementById('testBtn').onclick = () => {
             synth.cancel();
-            const ut = new SpeechSynthesisUtterance("Audio check successful");
+            const ut = new SpeechSynthesisUtterance("Audio Working");
             ut.volume = document.getElementById('vol').value;
             synth.speak(ut);
         };
