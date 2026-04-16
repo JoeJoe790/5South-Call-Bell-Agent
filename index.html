@@ -15,13 +15,16 @@
         
         #main-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; position: relative; }
         
+        /* Camera Area - Fixed at top 35% */
         #cam-area { height: 35dvh; padding: 10px; box-sizing: border-box; z-index: 100; flex-shrink: 0; }
         #cam-card { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; position: relative; background: #111; border: 1px solid #333; }
         #video { width: 100%; height: 100%; object-fit: cover; }
         #scan-box { position: absolute; border: 2px solid var(--accent-red); border-radius: 6px; pointer-events: none; z-index: 20; }
         
+        /* The lower part of the screen */
         #interaction-pane { flex-grow: 1; position: relative; overflow: hidden; display: flex; flex-direction: column; }
 
+        /* Normal UI (Rooms & Controls) */
         #room-area { height: 75%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 10px; box-sizing: border-box; }
         .room-tile { background: var(--tile); width: 95%; height: 45%; border-radius: 40px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .room-num { font-weight: 900; line-height: 1; letter-spacing: -5px; color: white; margin: 0; }
@@ -29,6 +32,7 @@
         #bottom-controls { height: 25%; display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 10px; padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid #222; box-sizing: border-box; }
         .control-tile { background: var(--tile); border-radius: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: none; font-weight: 800; text-transform: uppercase; font-size: 11px; color: white; }
         
+        /* Settings View - Injected below/beside camera */
         #settings-view { 
             position: absolute; inset: 0; 
             background: var(--bg); 
@@ -101,9 +105,6 @@
     const mainBtn = document.getElementById('mainBtn'), muteBtn = document.getElementById('muteBtn'), voiceSel = document.getElementById('voiceSel');
     const settingsView = document.getElementById('settings-view');
     let synth = window.speechSynthesis, activeRooms = [], lastSetString = "", countdown = 0, isRunning = false, isMuted = false, engine, stream, voices = [];
-    
-    // ACCURACY BUFFER
-    let voteCounter = {}; 
 
     function toggleCfg() { settingsView.classList.toggle('open'); }
     
@@ -130,7 +131,7 @@
         if (!isRunning) {
             try {
                 if (synth.paused) synth.resume();
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920, height: 1080 } });
                 video.srcObject = stream; isRunning = true; 
                 mainBtn.innerText = "STOP"; mainBtn.style.background = "var(--accent-red)";
                 startEngine(); setInterval(tick, 1000);
@@ -148,64 +149,23 @@
     function startEngine() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        
         engine = setInterval(async () => {
             if (!isRunning || !video.videoWidth) return;
-            
             const sx = video.videoWidth/video.offsetWidth, sy = video.videoHeight/video.offsetHeight;
             const w = document.getElementById('boxW').value*sx, h = document.getElementById('boxH').value*sy;
             const x = (video.videoWidth/2)+((document.getElementById('boxX').value/100)*video.videoWidth)-(w/2);
             const y = (video.videoHeight/2)+((document.getElementById('boxY').value/100)*video.videoHeight)-(h/2);
-            
-            canvas.width = w; canvas.height = h;
-            ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
-
-            // PRE-PROCESSING FOR ACCURACY (Thinning the "Fat" pixels)
-            const imgData = ctx.getImageData(0,0,w,h);
-            const data = imgData.data;
-            const thresh = document.getElementById('thresh').value;
-            for (let i = 0; i < data.length; i += 4) {
-                const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
-                const v = brightness > thresh ? 255 : 0;
-                data[i] = data[i+1] = data[i+2] = v;
-            }
-            ctx.putImageData(imgData, 0, 0);
-
-            const { data: { text, words } } = await Tesseract.recognize(canvas, 'eng', {
-                tessedit_char_whitelist: '0123456789',
-                tessjs_create_hocr: '0'
-            });
-
-            // Filtering: Look for 4-digit numbers, then grab the last 2 digits
-            // This ignores random "00" or single digit noise.
-            const validNumbers = words
-                .filter(word => word.confidence > 70)
-                .map(word => word.text.replace(/[^0-9]/g, ''))
-                .filter(num => num.length >= 2 && num !== "00")
-                .map(num => num.length >= 4 ? num.substring(num.length - 2) : num);
-
-            if (validNumbers.length > 0) {
-                const topMatch = validNumbers[0];
-                
-                // VOTING SYSTEM: Increment count for this number
-                voteCounter[topMatch] = (voteCounter[topMatch] || 0) + 1;
-
-                // Only confirm room if seen 3 times
-                if (voteCounter[topMatch] >= 3) {
-                    const found = [topMatch];
-                    const newSetString = found.join(",");
-                    if (newSetString !== lastSetString) {
-                        activeRooms = found; lastSetString = newSetString;
-                        render(); announce(); countdown = document.getElementById('repeat').value * 60;
-                    }
-                    voteCounter = {}; // Reset votes after finding a match
+            canvas.width = w; canvas.height = h; ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
+            const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+            const found = (text.match(/\d{4,5}/g) || []).map(n => n.substring(2, 4)).filter((v,i,a) => v.length === 2 && a.indexOf(v)===i).sort();
+            if (found.length > 0) {
+                const newSetString = found.join(",");
+                if (newSetString !== lastSetString) {
+                    activeRooms = found; lastSetString = newSetString;
+                    render(); announce(); countdown = document.getElementById('repeat').value * 60;
                 }
-            } else { 
-                // Gradually clear if nothing seen
-                activeRooms = []; lastSetString = ""; render(); 
-                voteCounter = {};
-            }
-        }, 1200); // Faster scan for better responsiveness
+            } else { activeRooms = []; lastSetString = ""; render(); }
+        }, 2200);
     }
 
     function render() {
@@ -244,3 +204,4 @@
 </script>
 </body>
 </html>
+
